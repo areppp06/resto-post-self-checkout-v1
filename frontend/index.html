@@ -239,6 +239,18 @@
               <span id="cartTotalVal" class="font-currency-total text-2xl font-black text-slate-900 tabular-nums">RM 0.00</span>
             </div>
 
+            <!-- Optional Email Receipt Field -->
+            <div id="emailReceiptContainer" class="space-y-1.5 pt-1">
+              <label for="customerEmailInput" class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <span>Email Receipt</span>
+                <span class="text-[10px] text-slate-400 font-semibold lowercase tracking-normal">optional</span>
+              </label>
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">mail</span>
+                <input id="customerEmailInput" type="email" placeholder="customer@example.com" class="w-full h-11 pl-9 pr-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none">
+              </div>
+            </div>
+
             <!-- Confirmation Checkbox under Your Total Is -->
             <label id="confirmCheckboxContainer" for="confirmItemsCheckbox" class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 hover:bg-orange-50/40 border border-slate-200/90 cursor-pointer select-none transition-all duration-200">
               <input id="confirmItemsCheckbox" type="checkbox" onchange="onConfirmCheckboxChange()" class="mt-0.5 w-4 h-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500 cursor-pointer shrink-0">
@@ -741,6 +753,8 @@
         clearCartLocal();
         const chk = document.getElementById("confirmItemsCheckbox");
         if (chk) chk.checked = false;
+        const em = document.getElementById("customerEmailInput");
+        if (em) em.value = "";
         hideCheckoutError();
         renderProductCatalog();
         renderCart();
@@ -893,11 +907,14 @@
         try {
           const cToken = getOrCreateClientToken();
           const dId = getOrCreateDeviceId();
+          const emailInput = document.getElementById("customerEmailInput");
+          const emailVal = emailInput ? String(emailInput.value || "").trim() : "";
           const payRes = await fetch("/api/pay", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               items: itemsPayload,
+              email: emailVal,
               client_token: cToken,
               device_id: dId,
             }),

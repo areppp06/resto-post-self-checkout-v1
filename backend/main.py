@@ -3150,6 +3150,7 @@ def pay(payload: dict, request: Request, db: Session = Depends(get_db)):
                 "products": products_payload,
                 "notes": f"{prof.get('restaurant_name', 'AFRC Kiosk')} - Intent {intent_id[:8]}",
             },
+            "send_receipt": bool(email),
             "payment_method_whitelist": [
                 "duitnow_qr", "dnqr", "fpx", "visa", "mastercard",
                 "razer_tng", "razer_grabpay", "razer_shopeepay",
