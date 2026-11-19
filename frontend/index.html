@@ -40,6 +40,21 @@
     .pb-sand-top { transform-origin: 12px 11.5px; animation: sandTopDrain 3.2s ease-in-out infinite; }
     .pb-sand-bottom { transform-origin: 12px 19.5px; animation: sandBottomFill 3.2s ease-in-out infinite; }
     .pb-sand-stream { stroke-dasharray: 2 2; animation: sandStream 3.2s linear infinite; }
+    @keyframes wigglePulse {
+      0% { transform: translateX(0); box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.75); }
+      15% { transform: translateX(-6px); }
+      30% { transform: translateX(6px); }
+      45% { transform: translateX(-4px); }
+      60% { transform: translateX(4px); box-shadow: 0 0 0 10px rgba(234, 88, 12, 0); }
+      75% { transform: translateX(-2px); }
+      100% { transform: translateX(0); box-shadow: 0 0 0 0 rgba(234, 88, 12, 0); }
+    }
+    .confirm-wiggle-pulse {
+      animation: wigglePulse 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+      border-color: #ea580c !important;
+      background-color: #fff7ed !important;
+      outline: 2px solid #ea580c !important;
+    }
   </style>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <script id="tailwind-config">
@@ -225,30 +240,27 @@
             </div>
 
             <!-- Confirmation Checkbox under Your Total Is -->
-            <label for="confirmItemsCheckbox" class="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 hover:bg-orange-50/40 border border-slate-200/90 cursor-pointer select-none transition-colors">
-              <input id="confirmItemsCheckbox" type="checkbox" onchange="renderCart()" class="mt-0.5 w-4 h-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500 cursor-pointer shrink-0">
-              <span class="text-xs font-medium text-slate-700 leading-snug">
+            <label id="confirmCheckboxContainer" for="confirmItemsCheckbox" class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 hover:bg-orange-50/40 border border-slate-200/90 cursor-pointer select-none transition-all duration-200">
+              <input id="confirmItemsCheckbox" type="checkbox" onchange="onConfirmCheckboxChange()" class="mt-0.5 w-4 h-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500 cursor-pointer shrink-0">
+              <span class="text-xs font-semibold text-slate-700 leading-snug">
                 I confirm that all listed items and quantities in my order are accurate.
               </span>
             </label>
 
-            <button onclick="submitCheckoutOrder()" class="w-full h-14 rounded-2xl bg-orange-600 hover:bg-orange-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed text-white font-headline-md text-base font-extrabold flex items-center justify-between px-4 transition-all shadow-lg shadow-orange-600/25 active:scale-[0.98] group" id="tenderBtn" disabled>
+            <button onclick="submitCheckoutOrder()" class="w-full h-14 rounded-2xl bg-orange-600 hover:bg-orange-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed text-white flex items-center justify-between px-5 transition-all shadow-lg shadow-orange-600/25 active:scale-[0.98] group" id="tenderBtn" disabled>
               <div class="flex items-center gap-3">
-                <span class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-                  <span class="material-symbols-outlined text-[22px]">payments</span>
+                <span class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[24px]">payments</span>
                 </span>
-                <div class="text-left">
-                  <span id="tenderBtnAmount" class="font-currency-total text-xl leading-none font-black">RM 0.00</span>
-                  <span id="tenderBtnSubLabel" class="block text-[10px] font-semibold opacity-90 uppercase tracking-wider mt-0.5">Pay Now</span>
-                </div>
+                <span id="tenderBtnLabel" class="font-headline-md text-xl font-black uppercase tracking-wider text-white">PAY NOW</span>
               </div>
               <div class="flex items-center gap-2">
                 <div class="flex items-center gap-1.5 opacity-85 group-hover:opacity-100 transition-opacity">
-                  <span class="material-symbols-outlined text-[19px]" title="Tap to Pay / NFC">contactless</span>
-                  <span class="material-symbols-outlined text-[19px]" title="Credit/Debit Card">credit_card</span>
-                  <span class="material-symbols-outlined text-[19px]" title="Online Banking / QR">local_atm</span>
+                  <span class="material-symbols-outlined text-[20px]" title="Tap to Pay / NFC">contactless</span>
+                  <span class="material-symbols-outlined text-[20px]" title="Credit/Debit Card">credit_card</span>
+                  <span class="material-symbols-outlined text-[20px]" title="Online Banking / QR">local_atm</span>
                 </div>
-                <span class="material-symbols-outlined text-[24px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                <span class="material-symbols-outlined text-[26px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
               </div>
             </button>
           </div>
@@ -741,8 +753,7 @@
         const subtotalVal = document.getElementById("cartSubtotalVal");
         const totalVal = document.getElementById("cartTotalVal");
         const tenderBtn = document.getElementById("tenderBtn");
-        const tenderBtnAmt = document.getElementById("tenderBtnAmount");
-        const tenderBtnSub = document.getElementById("tenderBtnSubLabel");
+        const tenderBtnLabel = document.getElementById("tenderBtnLabel");
         const headerBadge = document.getElementById("cartHeaderCountBadge");
         const clearBtn = document.getElementById("btnClearCart");
         const mobileBubble = document.getElementById("mobileCartCountBubble");
@@ -767,16 +778,14 @@
         if (entries.length === 0 && confirmChk) {
           confirmChk.checked = false;
         }
-        const isConfirmed = Boolean(confirmChk && confirmChk.checked);
 
         if (headerBadge) headerBadge.textContent = String(totalQty);
         if (clearBtn) clearBtn.classList.toggle("hidden", entries.length === 0);
         if (subtotalLbl) subtotalLbl.textContent = `Subtotal (${totalQty} ${totalQty === 1 ? "item" : "items"})`;
         if (subtotalVal) subtotalVal.textContent = formatRM(totalAmount);
         if (totalVal) totalVal.textContent = formatRM(totalAmount);
-        if (tenderBtnAmt) tenderBtnAmt.textContent = formatRM(totalAmount);
-        if (tenderBtnSub) tenderBtnSub.textContent = isSubmittingOrder ? "Starting Payment..." : "Pay Now";
-        if (tenderBtn) tenderBtn.disabled = entries.length === 0 || !isConfirmed || isSubmittingOrder;
+        if (tenderBtnLabel) tenderBtnLabel.textContent = isSubmittingOrder ? "STARTING PAYMENT..." : "PAY NOW";
+        if (tenderBtn) tenderBtn.disabled = entries.length === 0 || isSubmittingOrder;
         if (mobileBubble) mobileBubble.textContent = String(totalQty);
         if (mobileTotal) mobileTotal.textContent = formatRM(totalAmount);
 
@@ -843,16 +852,37 @@
         el.classList.add("hidden");
       }
 
+      function triggerConfirmWigglePulse() {
+        const container = document.getElementById("confirmCheckboxContainer");
+        const chk = document.getElementById("confirmItemsCheckbox");
+        if (!container) return;
+        container.classList.remove("confirm-wiggle-pulse");
+        void container.offsetWidth; // trigger reflow
+        container.classList.add("confirm-wiggle-pulse");
+        if (chk) chk.focus();
+      }
+
+      function onConfirmCheckboxChange() {
+        const container = document.getElementById("confirmCheckboxContainer");
+        const chk = document.getElementById("confirmItemsCheckbox");
+        if (chk && chk.checked) {
+          if (container) container.classList.remove("confirm-wiggle-pulse");
+          hideCheckoutError();
+        }
+      }
+
       async function submitCheckoutOrder() {
         if (isSubmittingOrder) return;
-        const confirmChk = document.getElementById("confirmItemsCheckbox");
-        if (!confirmChk || !confirmChk.checked) {
-          showCheckoutError("Please tick the confirmation box above to confirm your order items.");
-          return;
-        }
         const itemsPayload = getActiveCartItemsPayload();
         if (!itemsPayload.length) {
           showCheckoutError("Please add at least one item to your order.");
+          return;
+        }
+
+        const confirmChk = document.getElementById("confirmItemsCheckbox");
+        if (!confirmChk || !confirmChk.checked) {
+          triggerConfirmWigglePulse();
+          showCheckoutError("Please check the confirmation box above to proceed to payment.");
           return;
         }
 
