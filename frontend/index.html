@@ -952,6 +952,9 @@
           }
 
           const restName = payData.restaurant_name || "Self-Checkout Kiosk";
+          const prefill = {};
+          if (emailVal) prefill.email = emailVal;
+
           const checkout = new window.Razorpay({
             key: payData.key_id,
             amount: payData.amount,
@@ -961,6 +964,7 @@
             order_id: payData.order_id,
             callback_url: location.origin + "/api/pay/callback",
             redirect: true,
+            prefill: prefill,
             theme: { color: "#ea580c" },
             config: {
               display: {

@@ -3217,13 +3217,16 @@ def pay(payload: dict, request: Request, db: Session = Depends(get_db)):
         # Curlec gateway
         client, key_id = _curlec_client()
         try:
+            order_notes = {"intent_id": intent_id}
+            if email:
+                order_notes["email"] = email
+            if norm_phone:
+                order_notes["phone"] = norm_phone
             order = client.order.create({
                 "amount": amount_sen,
                 "currency": "MYR",
                 "receipt": f"ORD-{intent_id[:8].upper()}",
-                "notes": {
-                    "intent_id": intent_id,
-                },
+                "notes": order_notes,
             })
         except Exception as e:
             logger.exception(f"Curlec order creation failed: {e}")
