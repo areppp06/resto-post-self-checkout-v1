@@ -523,6 +523,7 @@
     let billData = null;
 
     try { localStorage.removeItem("afrc_active_session"); } catch (e) {}
+    try { localStorage.removeItem("takeway_kiosk_cart"); } catch (e) {}
     document.cookie = "afrc_active_session=; path=/; max-age=0; SameSite=Lax";
 
     async function load() {

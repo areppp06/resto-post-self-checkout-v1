@@ -2550,6 +2550,100 @@
           </div>
         </div>
       </div>
+
+      <!-- Payment Gateway Configuration Panel -->
+      <div class="panel-card" style="margin-top: 1.5rem;">
+        <div class="panel-header" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem;">
+          <div>
+            <div class="panel-title" style="display:flex; align-items:center; gap:0.5rem;">
+              <svg style="width:20px;height:20px;color:#0284c7;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+              <span>Payment Gateway Integration</span>
+              <span id="badgeActiveGateway" class="badge" style="background:#e0f2fe; color:#0369a1; font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:999px; font-weight:700;">CHIP Active</span>
+            </div>
+            <p style="font-size:0.82rem; color:#64748b; margin-top:0.25rem;">
+              Choose active gateway for kiosk self-checkout orders. Credentials are securely stored on the server.
+            </p>
+          </div>
+        </div>
+
+        <div class="panel-body" style="padding: 1.5rem 1rem;">
+          <!-- Active Gateway Selection Buttons/Cards -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+            
+            <!-- CHIP Option Card -->
+            <div id="cardGatewayChip" onclick="selectPaymentGateway('chip')" style="cursor:pointer; border:2px solid #0284c7; background:#f0f9ff; border-radius:14px; padding:1.15rem; transition:all 0.2s;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <input type="radio" id="radioGwChip" name="payment_gateway_choice" value="chip" checked style="accent-color:#0284c7; width:18px; height:18px;">
+                  <strong style="font-size:1rem; color:#0f172a;">CHIP (chip-in.asia)</strong>
+                </div>
+                <span id="badgeChipStatus" class="badge" style="background:#dcfce7; color:#15803d; font-size:0.75rem; padding:0.2rem 0.5rem; border-radius:999px; font-weight:700;">Configured</span>
+              </div>
+              <p style="font-size:0.8rem; color:#475569; margin:0; line-height:1.4;">
+                Redirects to CHIP hosted checkout supporting FPX, DuitNow QR, and cards.
+              </p>
+            </div>
+
+            <!-- Curlec Option Card -->
+            <div id="cardGatewayCurlec" onclick="selectPaymentGateway('curlec')" style="cursor:pointer; border:2px solid #e2e8f0; background:#f8fafc; border-radius:14px; padding:1.15rem; transition:all 0.2s;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <input type="radio" id="radioGwCurlec" name="payment_gateway_choice" value="curlec" style="accent-color:#0284c7; width:18px; height:18px;">
+                  <strong style="font-size:1rem; color:#0f172a;">Curlec / Razorpay</strong>
+                </div>
+                <span id="badgeCurlecStatus" class="badge" style="background:#dcfce7; color:#15803d; font-size:0.75rem; padding:0.2rem 0.5rem; border-radius:999px; font-weight:700;">Configured</span>
+              </div>
+              <p style="font-size:0.8rem; color:#475569; margin:0; line-height:1.4;">
+                Opens Curlec modal checkout supporting DuitNow QR, cards, and bank payments.
+              </p>
+            </div>
+
+          </div>
+
+          <!-- Credentials Form -->
+          <form onsubmit="handleSavePaymentSettings(event)" style="max-width:680px;">
+            <!-- CHIP Credentials Section -->
+            <div id="sectionChipCreds" style="margin-bottom:1.5rem; border:1px solid #e2e8f0; border-radius:12px; padding:1rem 1.15rem; background:#ffffff;">
+              <div style="font-weight:700; font-size:0.88rem; color:#0f172a; margin-bottom:0.75rem; display:flex; align-items:center; gap:0.4rem;">
+                <span>CHIP Credentials</span>
+                <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(from developer.chip-in.asia)</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr; gap:0.85rem;">
+                <label class="field-label">CHIP Brand ID
+                  <input type="text" class="input-box" id="chipBrandIdInput" placeholder="e.g. 54237cf6-01e6-4be6-930f-662dd5b63acc">
+                </label>
+                <label class="field-label">CHIP Secret Key
+                  <input type="password" class="input-box" id="chipSecretKeyInput" placeholder="••••••••••••••••••••••••••••••••">
+                </label>
+              </div>
+            </div>
+
+            <!-- Curlec Credentials Section -->
+            <div id="sectionCurlecCreds" style="margin-bottom:1.5rem; border:1px solid #e2e8f0; border-radius:12px; padding:1rem 1.15rem; background:#ffffff;">
+              <div style="font-weight:700; font-size:0.88rem; color:#0f172a; margin-bottom:0.75rem; display:flex; align-items:center; gap:0.4rem;">
+                <span>Curlec Credentials</span>
+                <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(Razorpay test/live keys)</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr; gap:0.85rem;">
+                <label class="field-label">Curlec Key ID
+                  <input type="text" class="input-box" id="curlecKeyIdInput" placeholder="e.g. rzp_test_...">
+                </label>
+                <label class="field-label">Curlec Key Secret
+                  <input type="password" class="input-box" id="curlecKeySecretInput" placeholder="••••••••••••••••••••••••">
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-dark" id="btnSavePaymentSettings">
+              <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              <span>Save Payment Settings</span>
+            </button>
+          </form>
+
+        </div>
+      </div>
     </section>
 
     <!-- TAB: FEEDBACKS -->
@@ -2823,6 +2917,7 @@ function switchTab(tabId, title) {
   }
   if (tabId === "restaurant") {
     loadRestaurantSettings();
+    loadPaymentSettings();
   }
   if (tabId === "feedbacks") {
     loadFeedbacks();
@@ -5969,6 +6064,143 @@ async function handleSaveOperationHours(event) {
 function setHourPreset(start, end) {
   document.getElementById("opHourStartInput").value = start;
   document.getElementById("opHourEndInput").value = end;
+}
+
+let currentPaymentSettings = null;
+
+async function loadPaymentSettings() {
+  try {
+    const res = await fetch("/api/admin/payment/settings");
+    if (!res.ok) return;
+    const data = await res.json();
+    currentPaymentSettings = data;
+
+    const active = data.active_gateway || "chip";
+    selectPaymentGateway(active, false);
+
+    const bActive = document.getElementById("badgeActiveGateway");
+    if (bActive) {
+      bActive.textContent = (active === "chip" ? "CHIP Active" : "Curlec Active");
+      bActive.style.background = (active === "chip" ? "#e0f2fe" : "#fef3c7");
+      bActive.style.color = (active === "chip" ? "#0369a1" : "#92400e");
+    }
+
+    const bChip = document.getElementById("badgeChipStatus");
+    if (bChip) {
+      if (data.chip && data.chip.is_configured) {
+        bChip.textContent = "Configured";
+        bChip.style.background = "#dcfce7";
+        bChip.style.color = "#15803d";
+      } else {
+        bChip.textContent = "Incomplete";
+        bChip.style.background = "#fee2e2";
+        bChip.style.color = "#b91c1c";
+      }
+    }
+
+    const bCurlec = document.getElementById("badgeCurlecStatus");
+    if (bCurlec) {
+      if (data.curlec && data.curlec.is_configured) {
+        bCurlec.textContent = "Configured";
+        bCurlec.style.background = "#dcfce7";
+        bCurlec.style.color = "#15803d";
+      } else {
+        bCurlec.textContent = "Incomplete";
+        bCurlec.style.background = "#fee2e2";
+        bCurlec.style.color = "#b91c1c";
+      }
+    }
+
+    const chipBrandInput = document.getElementById("chipBrandIdInput");
+    if (chipBrandInput && data.chip) {
+      chipBrandInput.value = data.chip.brand_id || "";
+    }
+    const chipSecInput = document.getElementById("chipSecretKeyInput");
+    if (chipSecInput) {
+      chipSecInput.placeholder = (data.chip && data.chip.has_secret) ? "•••••••••••••••••••••••••••••••• (saved)" : "Enter CHIP Secret Key";
+      chipSecInput.value = "";
+    }
+
+    const curlecKeyInput = document.getElementById("curlecKeyIdInput");
+    if (curlecKeyInput && data.curlec) {
+      curlecKeyInput.value = data.curlec.key_id || "";
+    }
+    const curlecSecInput = document.getElementById("curlecKeySecretInput");
+    if (curlecSecInput) {
+      curlecSecInput.placeholder = (data.curlec && data.curlec.has_secret) ? "•••••••••••••••••••••••• (saved)" : "Enter Curlec Key Secret";
+      curlecSecInput.value = "";
+    }
+
+  } catch (err) {
+    console.error("Failed to load payment settings:", err);
+  }
+}
+
+function selectPaymentGateway(gw, markRadio = true) {
+  const isChip = (gw === "chip");
+  const radioChip = document.getElementById("radioGwChip");
+  const radioCurlec = document.getElementById("radioGwCurlec");
+  if (radioChip && radioCurlec) {
+    radioChip.checked = isChip;
+    radioCurlec.checked = !isChip;
+  }
+  const cardChip = document.getElementById("cardGatewayChip");
+  const cardCurlec = document.getElementById("cardGatewayCurlec");
+  if (cardChip && cardCurlec) {
+    if (isChip) {
+      cardChip.style.borderColor = "#0284c7";
+      cardChip.style.background = "#f0f9ff";
+      cardCurlec.style.borderColor = "#e2e8f0";
+      cardCurlec.style.background = "#f8fafc";
+    } else {
+      cardCurlec.style.borderColor = "#0284c7";
+      cardCurlec.style.background = "#f0f9ff";
+      cardChip.style.borderColor = "#e2e8f0";
+      cardChip.style.background = "#f8fafc";
+    }
+  }
+}
+
+async function handleSavePaymentSettings(e) {
+  e.preventDefault();
+  const btn = document.getElementById("btnSavePaymentSettings");
+  btn.disabled = true;
+  btn.innerHTML = "<span>Saving...</span>";
+
+  const isChip = document.getElementById("radioGwChip").checked;
+  const activeGateway = isChip ? "chip" : "curlec";
+
+  const payload = {
+    active_gateway: activeGateway,
+    chip_brand_id: (document.getElementById("chipBrandIdInput").value || "").trim(),
+    curlec_key_id: (document.getElementById("curlecKeyIdInput").value || "").trim(),
+  };
+
+  const chipSec = (document.getElementById("chipSecretKeyInput").value || "").trim();
+  if (chipSec) payload.chip_secret_key = chipSec;
+
+  const curlecSec = (document.getElementById("curlecKeySecretInput").value || "").trim();
+  if (curlecSec) payload.curlec_key_secret = curlecSec;
+
+  try {
+    const res = await fetch("/api/admin/payment/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.detail || "Failed to save payment settings");
+    } else {
+      showToast(`Payment settings saved! Active gateway: ${activeGateway.toUpperCase()}`);
+      await loadPaymentSettings();
+    }
+  } catch (err) {
+    showToast("Network error saving payment settings");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path></svg><span>Save Payment Settings</span>';
+  }
 }
 </script>
 </body>

@@ -2716,6 +2716,9 @@ def _restaurant_settings() -> dict:
     current_time_str = now_local.strftime("%H:%M")
     is_open = _is_within_hours(current_time_str, op_start, op_end)
     op_text = f"{op_start} - {op_end}"
+    active_gateway = (env_data.get("ACTIVE_PAYMENT_GATEWAY", "chip") or "chip").strip().lower()
+    if active_gateway not in ("curlec", "chip"):
+        active_gateway = "chip"
     
     return {
         "coming_soon": coming_soon,
@@ -2726,6 +2729,7 @@ def _restaurant_settings() -> dict:
         "is_open": is_open,
         "operation_hour_text": op_text,
         "current_server_time": current_time_str,
+        "active_payment_gateway": active_gateway,
     }
 
 def _save_restaurant_settings(updates: dict) -> dict:
@@ -2748,6 +2752,10 @@ def _save_restaurant_settings(updates: dict) -> dict:
         keys_map["OPERATION_HOURS_START"] = str(updates["operation_hours_start"]).strip()
     if "operation_hours_end" in updates and updates["operation_hours_end"]:
         keys_map["OPERATION_HOURS_END"] = str(updates["operation_hours_end"]).strip()
+    if "active_payment_gateway" in updates and updates["active_payment_gateway"]:
+        keys_map["ACTIVE_PAYMENT_GATEWAY"] = str(updates["active_payment_gateway"]).strip().lower()
+    elif "ACTIVE_PAYMENT_GATEWAY" in updates and updates["ACTIVE_PAYMENT_GATEWAY"]:
+        keys_map["ACTIVE_PAYMENT_GATEWAY"] = str(updates["ACTIVE_PAYMENT_GATEWAY"]).strip().lower()
         
     new_lines = []
     handled_keys = set()
@@ -2773,6 +2781,97 @@ def _save_restaurant_settings(updates: dict) -> dict:
         
     _RL_FILE_CACHE.pop(str(env_path), None)
     return _restaurant_settings()
+
+def _chip_config() -> tuple[str, str]:
+    c_env = _read_env_file_cached(ENV_DIR / "chip.env") or _read_env_file_cached(ROOT / "chip.env")
+    secret_key = (c_env.get("CHIP_SECRET_KEY") or os.getenv("CHIP_SECRET_KEY", "")).strip()
+    brand_id = (c_env.get("CHIP_BRAND_ID") or os.getenv("CHIP_BRAND_ID", "")).strip()
+    if not secret_key or not brand_id:
+        raise HTTPException(status_code=503, detail="CHIP payment gateway is not configured. Please check admin settings.")
+    return secret_key, brand_id
+
+def _payment_gateway_settings() -> dict:
+    env_data = {
+        **_read_env_file_cached(ENV_DIR / ".env"),
+        **_read_env_file_cached(ROOT / ".env"),
+        **_read_env_file_cached(ENV_DIR / "restaurant.env"),
+        **_read_env_file_cached(ROOT / "restaurant.env"),
+    }
+    curlec_env = {
+        **_read_env_file_cached(ENV_DIR / "curlec.env"),
+        **_read_env_file_cached(ROOT / "curlec.env"),
+    }
+    chip_env = {
+        **_read_env_file_cached(ENV_DIR / "chip.env"),
+        **_read_env_file_cached(ROOT / "chip.env"),
+    }
+    active_gateway = (env_data.get("ACTIVE_PAYMENT_GATEWAY", "chip") or "chip").strip().lower()
+    if active_gateway not in ("curlec", "chip"):
+        active_gateway = "chip"
+
+    c_key_id = (curlec_env.get("CURLEC_KEY_ID") or os.getenv("CURLEC_KEY_ID", "")).strip()
+    c_sec = (curlec_env.get("CURLEC_KEY_SECRET") or os.getenv("CURLEC_KEY_SECRET", "")).strip()
+    curlec_configured = bool(c_key_id and c_sec and c_key_id != "your-curlec-key-id")
+
+    ch_brand = (chip_env.get("CHIP_BRAND_ID") or os.getenv("CHIP_BRAND_ID", "")).strip()
+    ch_sec = (chip_env.get("CHIP_SECRET_KEY") or os.getenv("CHIP_SECRET_KEY", "")).strip()
+    chip_configured = bool(ch_brand and ch_sec)
+
+    return {
+        "active_gateway": active_gateway,
+        "curlec": {
+            "key_id": c_key_id,
+            "has_secret": bool(c_sec),
+            "is_configured": curlec_configured,
+        },
+        "chip": {
+            "brand_id": ch_brand,
+            "has_secret": bool(ch_sec),
+            "is_configured": chip_configured,
+        }
+    }
+
+def _save_payment_gateway_settings(data: dict) -> dict:
+    if "active_gateway" in data:
+        gw = str(data["active_gateway"]).strip().lower()
+        if gw in ("curlec", "chip"):
+            _save_restaurant_settings({"ACTIVE_PAYMENT_GATEWAY": gw})
+
+    # Curlec updates
+    curlec_updates = {}
+    if "curlec_key_id" in data and str(data["curlec_key_id"]).strip():
+        curlec_updates["CURLEC_KEY_ID"] = str(data["curlec_key_id"]).strip()
+    if "curlec_key_secret" in data and str(data["curlec_key_secret"]).strip():
+        curlec_updates["CURLEC_KEY_SECRET"] = str(data["curlec_key_secret"]).strip()
+    if curlec_updates:
+        c_path = ENV_DIR / "curlec.env"
+        existing = {}
+        if c_path.exists():
+            existing = _read_env_file_cached(c_path)
+        existing.update(curlec_updates)
+        with open(c_path, "w", encoding="utf-8") as f:
+            for k, v in existing.items():
+                f.write(f"{k}={v}\n")
+        _RL_FILE_CACHE.pop(str(c_path), None)
+
+    # CHIP updates
+    chip_updates = {}
+    if "chip_brand_id" in data and str(data["chip_brand_id"]).strip():
+        chip_updates["CHIP_BRAND_ID"] = str(data["chip_brand_id"]).strip()
+    if "chip_secret_key" in data and str(data["chip_secret_key"]).strip():
+        chip_updates["CHIP_SECRET_KEY"] = str(data["chip_secret_key"]).strip()
+    if chip_updates:
+        ch_path = ENV_DIR / "chip.env"
+        existing = {}
+        if ch_path.exists():
+            existing = _read_env_file_cached(ch_path)
+        existing.update(chip_updates)
+        with open(ch_path, "w", encoding="utf-8") as f:
+            for k, v in existing.items():
+                f.write(f"{k}={v}\n")
+        _RL_FILE_CACHE.pop(str(ch_path), None)
+
+    return _payment_gateway_settings()
 
 
 def _curlec_client():
@@ -2844,6 +2943,7 @@ def _mint_receipt_from_payment(
     db: Session,
     bypass_sig: bool = False,
     payment_entity: dict | None = None,
+    gateway: str = "",
 ) -> tuple[SessionBill | None, str]:
     order_id = str(order_id or "").strip()
     payment_id = str(payment_id or "").strip()
@@ -2861,37 +2961,71 @@ def _mint_receipt_from_payment(
         if existing:
             return existing, "paid"
 
-    payment = payment_entity
-    if not bypass_sig:
-        client, _key_id = _curlec_client()
-        try:
-            client.utility.verify_payment_signature({
-                "razorpay_order_id": order_id,
-                "razorpay_payment_id": payment_id,
-                "razorpay_signature": signature,
-            })
-        except Exception as e:
-            logger.warning(f"Signature verification failed for order {order_id}: {e}")
-            return None, "invalid_signature"
-
-        if not payment:
-            try:
-                payment = client.payment.fetch(payment_id)
-            except Exception as e:
-                logger.warning(f"Could not fetch payment {payment_id} from Curlec: {e}")
-                return None, "fetch_failed"
-
-    if not payment:
-        payment = {"status": "captured", "currency": "MYR"}
-
-    if str(payment.get("status")) != "captured" or str(payment.get("currency")) != "MYR":
-        logger.warning(f"Payment {payment_id} status is not captured: {payment.get('status')}")
-        return None, "not_captured"
-
     intent = db.query(CheckoutIntent).filter(CheckoutIntent.curlec_order_id == order_id).first()
+    if not intent:
+        intent = db.query(CheckoutIntent).filter(CheckoutIntent.id == order_id).first()
     if not intent:
         logger.warning(f"No CheckoutIntent found for order {order_id}")
         return None, "intent_not_found"
+
+    effective_gateway = getattr(intent, "payment_gateway", "") or gateway or "curlec"
+    payment = payment_entity
+
+    if effective_gateway == "curlec":
+        if not bypass_sig:
+            client, _key_id = _curlec_client()
+            try:
+                client.utility.verify_payment_signature({
+                    "razorpay_order_id": order_id,
+                    "razorpay_payment_id": payment_id,
+                    "razorpay_signature": signature,
+                })
+            except Exception as e:
+                logger.warning(f"Signature verification failed for order {order_id}: {e}")
+                return None, "invalid_signature"
+
+            if not payment:
+                try:
+                    payment = client.payment.fetch(payment_id)
+                except Exception as e:
+                    logger.warning(f"Could not fetch payment {payment_id} from Curlec: {e}")
+                    return None, "fetch_failed"
+
+        if not payment:
+            payment = {"status": "captured", "currency": "MYR"}
+
+        if str(payment.get("status")) != "captured" or str(payment.get("currency")) != "MYR":
+            logger.warning(f"Payment {payment_id} status is not captured: {payment.get('status')}")
+            return None, "not_captured"
+
+    elif effective_gateway == "chip":
+        if not payment:
+            secret_key, _ = _chip_config()
+            try:
+                with httpx.Client(timeout=10) as hclient:
+                    resp = hclient.get(
+                        f"https://gate.chip-in.asia/api/v1/purchases/{order_id}/",
+                        headers={"Authorization": f"Bearer {secret_key}"}
+                    )
+                    if resp.status_code != 200:
+                        logger.error(f"CHIP verification failed HTTP {resp.status_code}")
+                        return None, "verification_failed"
+                    pdata = resp.json()
+                p_status = str(pdata.get("status", "")).lower()
+                if p_status not in ("paid", "cleared", "settled"):
+                    logger.warning(f"CHIP purchase {order_id} status is {p_status}, not paid")
+                    return None, "not_captured"
+                payment = {
+                    "status": "captured",
+                    "currency": "MYR",
+                    "amount": int(pdata.get("purchase", {}).get("total") or 0)
+                }
+            except Exception as e:
+                logger.error(f"Failed verifying CHIP purchase {order_id}: {e}")
+                return None, "verification_failed"
+
+        if str(payment.get("status")) != "captured" or str(payment.get("currency")) != "MYR":
+            return None, "not_captured"
 
     expected_sen = int(round(intent.total_amount * 100))
     if int(payment.get("amount") or 0) != expected_sen:
@@ -2913,7 +3047,8 @@ def _mint_receipt_from_payment(
         receipt_phone=phone,
         receipt_email=email,
         curlec_order_id=order_id,
-        curlec_payment_id=payment_id,
+        curlec_payment_id=payment_id or f"chip_{order_id}",
+        payment_gateway=effective_gateway,
         client_token=intent.client_token,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
@@ -2923,7 +3058,7 @@ def _mint_receipt_from_payment(
     db.delete(intent)
     db.commit()
 
-    logger.info(f"Minted official receipt #{bill_number} (session {receipt_id}) for payment {payment_id}")
+    logger.info(f"Minted official receipt #{bill_number} (session {receipt_id}) for payment {payment_id} via {effective_gateway}")
     return bill, "paid"
 
 def _normalize_my_phone(raw_phone: str) -> str:
@@ -2959,27 +3094,6 @@ def pay(payload: dict, request: Request, db: Session = Depends(get_db)):
     bill_items, total = _normalize_order_items(req_items, db)
     amount_sen = int(round(total * 100))
 
-    client, key_id = _curlec_client()
-    intent_id = str(uuid.uuid4())
-    try:
-        order = client.order.create({
-            "amount": amount_sen,
-            "currency": "MYR",
-            "receipt": f"ORD-{intent_id[:8].upper()}",
-            "notes": {
-                "intent_id": intent_id,
-            },
-        })
-    except Exception as e:
-        logger.exception(f"Curlec order creation failed: {e}")
-        err_str = str(e)
-        if "minimum amount" in err_str.lower():
-            raise HTTPException(
-                status_code=400,
-                detail=f"Payment amount (RM {amount_sen / 100:.2f}) is below the minimum allowed payment of RM 0.10.",
-            )
-        raise HTTPException(status_code=502, detail=f"Could not start the payment: {err_str[:120]}")
-
     c_token = _get_client_token(request, (payload or {}).get("client_token", ""))
     d_id = _get_device_id(request, explicit_device=(payload or {}).get("device_id", ""))
 
@@ -2992,33 +3106,154 @@ def pay(payload: dict, request: Request, db: Session = Depends(get_db)):
         if not re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", email) or len(email) > 100:
             raise HTTPException(status_code=400, detail="Enter a valid email address or leave it blank")
 
-    intent = CheckoutIntent(
-        id=intent_id,
-        curlec_order_id=order["id"],
-        items_json=json.dumps([b.dict() for b in bill_items]),
-        total_amount=total,
-        client_token=c_token,
-        device_id=d_id,
-        receipt_phone=norm_phone,
-        receipt_email=email,
-        created_at=datetime.utcnow(),
-    )
-    db.add(intent)
-    db.commit()
-
+    gw_settings = _payment_gateway_settings()
+    active_gw = gw_settings.get("active_gateway", "chip")
     prof = _restaurant_profile()
-    return {
-        "key_id": key_id,
-        "order_id": order["id"],
-        "intent_id": intent_id,
-        "amount": amount_sen,
-        "currency": "MYR",
-        "restaurant_name": prof["restaurant_name"],
-        "company_name": prof["company_name"],
-        "company_phone": prof["company_phone"],
-        "company_email": prof["company_email"],
-        "status": "ready",
-    }
+    intent_id = str(uuid.uuid4())
+
+    if active_gw == "chip":
+        secret_key, brand_id = _chip_config()
+        forwarded_proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+        forwarded_host = request.headers.get("x-forwarded-host", request.headers.get("host", str(request.base_url.netloc)))
+        if not forwarded_host or forwarded_host == "testserver":
+            forwarded_host = "takcakap.com"
+            forwarded_proto = "https"
+        base_url = f"{forwarded_proto}://{forwarded_host}"
+        chip_callback = f"{base_url}/api/pay/chip-callback?intent_id={intent_id}"
+
+        prod_sum = sum(int(round(item.unit_price * 100)) * item.quantity for item in bill_items)
+        products_payload = []
+        for i, item in enumerate(bill_items):
+            u_sen = int(round(item.unit_price * 100))
+            if i == 0 and prod_sum != amount_sen:
+                u_sen += (amount_sen - prod_sum) // max(1, item.quantity)
+            products_payload.append({
+                "name": item.name[:64],
+                "price": u_sen,
+                "quantity": item.quantity,
+            })
+
+        client_data = {
+            "email": email or f"kiosk_{intent_id[:8]}@takcakap.com",
+        }
+        if norm_phone:
+            client_data["phone"] = norm_phone
+
+        chip_payload = {
+            "brand_id": brand_id,
+            "client": client_data,
+            "purchase": {
+                "currency": "MYR",
+                "products": products_payload,
+                "notes": f"{prof.get('restaurant_name', 'AFRC Kiosk')} - Intent {intent_id[:8]}",
+            },
+            "success_redirect": f"{chip_callback}&status=success",
+            "failure_redirect": f"{chip_callback}&status=failure",
+            "cancel_redirect": f"{base_url}/?payment=cancelled",
+        }
+        if base_url.startswith("https://"):
+            chip_payload["success_callback"] = f"{base_url}/api/chip/webhook"
+
+        try:
+            with httpx.Client(timeout=15) as hclient:
+                c_resp = hclient.post(
+                    "https://gate.chip-in.asia/api/v1/purchases/",
+                    json=chip_payload,
+                    headers={"Authorization": f"Bearer {secret_key}"}
+                )
+                if c_resp.status_code >= 400:
+                    err_txt = c_resp.text
+                    logger.error(f"CHIP purchase creation failed: HTTP {c_resp.status_code} {err_txt}")
+                    raise HTTPException(status_code=502, detail=f"CHIP gateway error: {err_txt[:120]}")
+                chip_data = c_resp.json()
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.exception(f"CHIP purchase call failed: {e}")
+            raise HTTPException(status_code=502, detail=f"Could not connect to CHIP: {str(e)[:120]}")
+
+        purchase_id = chip_data["id"]
+        checkout_url = chip_data["checkout_url"]
+
+        intent = CheckoutIntent(
+            id=intent_id,
+            curlec_order_id=purchase_id,
+            payment_gateway="chip",
+            items_json=json.dumps([b.dict() for b in bill_items]),
+            total_amount=total,
+            client_token=c_token,
+            device_id=d_id,
+            receipt_phone=norm_phone,
+            receipt_email=email,
+            created_at=datetime.utcnow(),
+        )
+        db.add(intent)
+        db.commit()
+
+        return {
+            "gateway": "chip",
+            "checkout_url": checkout_url,
+            "purchase_id": purchase_id,
+            "intent_id": intent_id,
+            "amount": amount_sen,
+            "currency": "MYR",
+            "restaurant_name": prof["restaurant_name"],
+            "company_name": prof["company_name"],
+            "company_phone": prof["company_phone"],
+            "company_email": prof["company_email"],
+            "status": "ready",
+        }
+
+    else:
+        # Curlec gateway
+        client, key_id = _curlec_client()
+        try:
+            order = client.order.create({
+                "amount": amount_sen,
+                "currency": "MYR",
+                "receipt": f"ORD-{intent_id[:8].upper()}",
+                "notes": {
+                    "intent_id": intent_id,
+                },
+            })
+        except Exception as e:
+            logger.exception(f"Curlec order creation failed: {e}")
+            err_str = str(e)
+            if "minimum amount" in err_str.lower():
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Payment amount (RM {amount_sen / 100:.2f}) is below the minimum allowed payment of RM 0.10.",
+                )
+            raise HTTPException(status_code=502, detail=f"Could not start the payment: {err_str[:120]}")
+
+        intent = CheckoutIntent(
+            id=intent_id,
+            curlec_order_id=order["id"],
+            payment_gateway="curlec",
+            items_json=json.dumps([b.dict() for b in bill_items]),
+            total_amount=total,
+            client_token=c_token,
+            device_id=d_id,
+            receipt_phone=norm_phone,
+            receipt_email=email,
+            created_at=datetime.utcnow(),
+        )
+        db.add(intent)
+        db.commit()
+
+        return {
+            "gateway": "curlec",
+            "key_id": key_id,
+            "order_id": order["id"],
+            "intent_id": intent_id,
+            "amount": amount_sen,
+            "currency": "MYR",
+            "restaurant_name": prof["restaurant_name"],
+            "company_name": prof["company_name"],
+            "company_phone": prof["company_phone"],
+            "company_email": prof["company_email"],
+            "status": "ready",
+        }
 
 @app.post("/api/pay/confirm")
 def pay_confirm(payload: dict, db: Session = Depends(get_db)):
@@ -3046,6 +3281,104 @@ async def pay_callback(request: Request, db: Session = Depends(get_db)):
     if state == "paid" and bill:
         return RedirectResponse(f"/payment/success?session={quote(bill.id)}", status_code=303)
     return RedirectResponse("/?payment=failed", status_code=303)
+
+@app.get("/api/pay/chip-callback")
+async def pay_chip_callback(
+    request: Request,
+    intent_id: str = "",
+    status: str = "",
+    id: str = "",
+    purchase_id: str = "",
+    db: Session = Depends(get_db),
+):
+    pid = (purchase_id or id or "").strip()
+    intent = None
+    if intent_id:
+        intent = db.query(CheckoutIntent).filter(CheckoutIntent.id == intent_id).first()
+    if not pid and intent:
+        pid = intent.curlec_order_id
+
+    # If official receipt is already minted
+    if pid:
+        existing = db.query(SessionBill).filter(
+            (SessionBill.curlec_order_id == pid) | (SessionBill.curlec_payment_id == f"chip_{pid}")
+        ).first()
+        if existing:
+            return RedirectResponse(f"/payment/success?session={quote(existing.id)}", status_code=303)
+
+    if status in ("failure", "cancelled") or not pid:
+        logger.warning(f"CHIP callback indicated failure or missing purchase: status={status}, pid={pid}")
+        return RedirectResponse(f"/?payment={status or 'failed'}", status_code=303)
+
+    secret_key, brand_id = _chip_config()
+    try:
+        with httpx.Client(timeout=10) as hclient:
+            resp = hclient.get(
+                f"https://gate.chip-in.asia/api/v1/purchases/{pid}/",
+                headers={"Authorization": f"Bearer {secret_key}"}
+            )
+            if resp.status_code != 200:
+                logger.error(f"CHIP verify fetch failed HTTP {resp.status_code}")
+                return RedirectResponse("/?payment=failed", status_code=303)
+            pdata = resp.json()
+    except Exception as e:
+        logger.error(f"Error fetching CHIP purchase {pid}: {e}")
+        return RedirectResponse("/?payment=failed", status_code=303)
+
+    p_status = str(pdata.get("status", "")).lower()
+    if p_status in ("paid", "cleared", "settled"):
+        bill, state = _mint_receipt_from_payment(
+            order_id=pid,
+            payment_id=f"chip_{pid}",
+            signature="",
+            db=db,
+            bypass_sig=True,
+            payment_entity={
+                "status": "captured",
+                "currency": "MYR",
+                "amount": int(pdata.get("purchase", {}).get("total") or 0),
+            },
+            gateway="chip",
+        )
+        if bill and state == "paid":
+            return RedirectResponse(f"/payment/success?session={quote(bill.id)}", status_code=303)
+        else:
+            logger.error(f"Receipt minting failed for CHIP purchase {pid}: {state}")
+            return RedirectResponse("/?payment=failed", status_code=303)
+    else:
+        logger.warning(f"CHIP purchase {pid} status is '{p_status}', not paid")
+        return RedirectResponse(f"/?payment={p_status}", status_code=303)
+
+@app.post("/api/chip/webhook")
+async def chip_webhook(request: Request, db: Session = Depends(get_db)):
+    body = await request.body()
+    try:
+        payload = json.loads(body)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    pid = str(payload.get("id") or "").strip()
+    status = str(payload.get("status") or "").lower()
+    if not pid:
+        raise HTTPException(status_code=400, detail="Missing purchase ID")
+
+    if status in ("paid", "cleared", "settled"):
+        total_sen = int(payload.get("purchase", {}).get("total") or 0)
+        bill, state = _mint_receipt_from_payment(
+            order_id=pid,
+            payment_id=f"chip_{pid}",
+            signature="",
+            db=db,
+            bypass_sig=True,
+            payment_entity={
+                "status": "captured",
+                "currency": "MYR",
+                "amount": total_sen,
+            },
+            gateway="chip",
+        )
+        logger.info(f"CHIP webhook processed for purchase {pid}: result={state}")
+    return {"status": "ok"}
 
 @app.post("/api/curlec/webhook")
 async def curlec_webhook(request: Request, db: Session = Depends(get_db)):
@@ -4173,6 +4506,31 @@ async def update_admin_restaurant_settings(request: Request, db: Session = Depen
         "restaurant_name": prof["restaurant_name"],
         "company_name": prof["company_name"],
     }
+
+
+@app.get("/api/admin/payment/settings")
+def get_admin_payment_settings(request: Request, db: Session = Depends(get_db)):
+    require_admin_api(request, db)
+    return _payment_gateway_settings()
+
+
+@app.post("/api/admin/payment/settings")
+async def update_admin_payment_settings(request: Request, db: Session = Depends(get_db)):
+    current_admin = require_admin_api(request, db)
+    data = await request.json()
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    updated = _save_payment_gateway_settings(data)
+    gw = updated.get("active_gateway", "chip")
+    db.add(AuditLog(
+        cashier_id=current_admin.id,
+        admin_username=current_admin.username,
+        action="PAYMENT_GATEWAY_UPDATE",
+        details=f"Admin '{current_admin.username}' updated payment gateway settings (Active Gateway: {gw.upper()})"
+    ))
+    db.commit()
+    return updated
 
 
 @app.get("/api/admin/failed-scans")

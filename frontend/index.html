@@ -911,13 +911,19 @@
           if (!payRes.ok) {
             let pErr = (typeof payData.detail === "string" ? payData.detail : payData.detail?.message) || "";
             if (!pErr) {
-              if (payRes.status === 503) pErr = "Payment gateway is not configured. Please configure Curlec credentials.";
+              if (payRes.status === 503) pErr = "Payment gateway is not configured. Please check admin settings.";
               else if (payRes.status === 403) pErr = "We are currently outside operating hours.";
               else pErr = `Payment could not be started (HTTP ${payRes.status}). Please try again.`;
             }
             showCheckoutError(pErr);
             isSubmittingOrder = false;
             renderCart();
+            return;
+          }
+
+          if (payData.gateway === "chip" && payData.checkout_url) {
+            // Forward customer to CHIP Hosted Checkout page
+            window.location.href = payData.checkout_url;
             return;
           }
 
@@ -1073,7 +1079,11 @@
           }
           document.getElementById("stateLockOverlay").classList.add("hidden");
           if (paymentStatusParam === "failed") {
-            showCheckoutError("Payment was not completed. Your items are saved — tap Pay Now whenever you are ready.");
+            showCheckoutError("Payment was not completed. Your items are saved — tap Pay Now to retry.");
+            try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
+          } else if (paymentStatusParam === "cancelled") {
+            showCheckoutError("Payment was cancelled. Your items are saved — tap Pay Now whenever you are ready.");
+            try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
           }
           return true;
         } catch (e) {
