@@ -115,6 +115,7 @@ class SessionBill(Base):
     curlec_order_id = Column(String, default="")
     curlec_payment_id = Column(String, default="")
     payment_gateway = Column(String, default="curlec")
+    intent_id = Column(String, default="", index=True)
     image_key = Column(String, default="")
     retake_count = Column(Integer, default=0)
     client_token = Column(String, default="", index=True)
@@ -155,6 +156,8 @@ class CheckoutIntent(Base):
     id = Column(String(64), primary_key=True)
     curlec_order_id = Column(String(64), unique=True, index=True)
     payment_gateway = Column(String(32), default="curlec")
+    bill_id = Column(String(64), default="", index=True)
+    status = Column(String(32), default="pending", index=True)
     items_json = Column(Text, nullable=False)
     total_amount = Column(Float, nullable=False)
     client_token = Column(String(128), default="")
@@ -258,6 +261,8 @@ def init_db():
             conn.exec_driver_sql("ALTER TABLE sessions ADD COLUMN curlec_payment_id TEXT DEFAULT ''")
         if session_columns and "payment_gateway" not in session_columns:
             conn.exec_driver_sql("ALTER TABLE sessions ADD COLUMN payment_gateway TEXT DEFAULT 'curlec'")
+        if session_columns and "intent_id" not in session_columns:
+            conn.exec_driver_sql("ALTER TABLE sessions ADD COLUMN intent_id TEXT DEFAULT ''")
         if session_columns and "image_key" not in session_columns:
             conn.exec_driver_sql("ALTER TABLE sessions ADD COLUMN image_key TEXT DEFAULT ''")
         if session_columns and "retake_count" not in session_columns:
@@ -271,6 +276,10 @@ def init_db():
         intent_columns = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(checkout_intents)")]
         if intent_columns and "payment_gateway" not in intent_columns:
             conn.exec_driver_sql("ALTER TABLE checkout_intents ADD COLUMN payment_gateway TEXT DEFAULT 'curlec'")
+        if intent_columns and "bill_id" not in intent_columns:
+            conn.exec_driver_sql("ALTER TABLE checkout_intents ADD COLUMN bill_id TEXT DEFAULT ''")
+        if intent_columns and "status" not in intent_columns:
+            conn.exec_driver_sql("ALTER TABLE checkout_intents ADD COLUMN status TEXT DEFAULT 'pending'")
         cooldown_columns = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(client_cooldowns)")]
         if cooldown_columns and "reason" not in cooldown_columns:
             conn.exec_driver_sql("ALTER TABLE client_cooldowns ADD COLUMN reason TEXT DEFAULT ''")

@@ -3049,13 +3049,16 @@ def _mint_receipt_from_payment(
         curlec_order_id=order_id,
         curlec_payment_id=payment_id or f"chip_{order_id}",
         payment_gateway=effective_gateway,
+        intent_id=intent.id if intent else "",
         client_token=intent.client_token,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
         paid_at=datetime.utcnow(),
     )
     db.add(bill)
-    db.delete(intent)
+    if intent:
+        intent.bill_id = receipt_id
+        intent.status = "paid"
     db.commit()
 
     logger.info(f"Minted official receipt #{bill_number} (session {receipt_id}) for payment {payment_id} via {effective_gateway}")
@@ -3147,6 +3150,11 @@ def pay(payload: dict, request: Request, db: Session = Depends(get_db)):
                 "products": products_payload,
                 "notes": f"{prof.get('restaurant_name', 'AFRC Kiosk')} - Intent {intent_id[:8]}",
             },
+            "payment_method_whitelist": [
+                "duitnow_qr", "dnqr", "fpx", "visa", "mastercard",
+                "razer_tng", "razer_grabpay", "razer_shopeepay",
+                "mpgs_apple_pay", "mpgs_google_pay"
+            ],
             "success_redirect": f"{chip_callback}&status=success",
             "failure_redirect": f"{chip_callback}&status=failure",
             "cancel_redirect": f"{base_url}/?payment=cancelled",
@@ -3298,7 +3306,19 @@ async def pay_chip_callback(
     if not pid and intent:
         pid = intent.curlec_order_id
 
-    # If official receipt is already minted
+    # 1. Check if official receipt was already minted for this intent_id
+    if intent_id:
+        existing = db.query(SessionBill).filter(SessionBill.intent_id == intent_id).first()
+        if existing:
+            return RedirectResponse(f"/payment/success?session={quote(existing.id)}", status_code=303)
+
+    # 2. Check if intent points to a minted bill_id
+    if intent and getattr(intent, "bill_id", ""):
+        existing = db.query(SessionBill).filter(SessionBill.id == intent.bill_id).first()
+        if existing:
+            return RedirectResponse(f"/payment/success?session={quote(existing.id)}", status_code=303)
+
+    # 3. Check if bill already minted for this purchase ID
     if pid:
         existing = db.query(SessionBill).filter(
             (SessionBill.curlec_order_id == pid) | (SessionBill.curlec_payment_id == f"chip_{pid}")
@@ -3306,9 +3326,13 @@ async def pay_chip_callback(
         if existing:
             return RedirectResponse(f"/payment/success?session={quote(existing.id)}", status_code=303)
 
-    if status in ("failure", "cancelled") or not pid:
-        logger.warning(f"CHIP callback indicated failure or missing purchase: status={status}, pid={pid}")
-        return RedirectResponse(f"/?payment={status or 'failed'}", status_code=303)
+    if status in ("failure", "cancelled"):
+        logger.info(f"CHIP callback indicated {status} for intent={intent_id}, pid={pid}")
+        return RedirectResponse(f"/?payment={status}", status_code=303)
+
+    if not pid:
+        logger.warning(f"CHIP callback missing purchase ID: intent_id={intent_id}, status={status}")
+        return RedirectResponse("/?payment=failed", status_code=303)
 
     secret_key, brand_id = _chip_config()
     try:
