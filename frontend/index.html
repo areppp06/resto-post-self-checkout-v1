@@ -55,6 +55,16 @@
       background-color: #fff7ed !important;
       outline: 2px solid #ea580c !important;
     }
+    @keyframes paymentShimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .btn-shimmer-active {
+      background: linear-gradient(90deg, #ea580c 0%, #f97316 25%, #ffedd5 50%, #f97316 75%, #ea580c 100%) !important;
+      background-size: 200% 100% !important;
+      animation: paymentShimmer 1.5s linear infinite !important;
+      box-shadow: 0 12px 30px -4px rgba(234, 88, 12, 0.5) !important;
+    }
   </style>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <script id="tailwind-config">
@@ -259,20 +269,39 @@
               </span>
             </label>
 
-            <button onclick="submitCheckoutOrder()" class="w-full h-14 rounded-2xl bg-orange-600 hover:bg-orange-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed text-white flex items-center justify-between px-5 transition-all shadow-lg shadow-orange-600/25 active:scale-[0.98] group" id="tenderBtn" disabled>
-              <div class="flex items-center gap-3">
-                <span class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                  <span class="material-symbols-outlined text-[24px]">payments</span>
-                </span>
-                <span id="tenderBtnLabel" class="font-headline-md text-xl font-black uppercase tracking-wider text-white">PAY NOW</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="flex items-center gap-1.5 opacity-85 group-hover:opacity-100 transition-opacity">
-                  <span class="material-symbols-outlined text-[20px]" title="Tap to Pay / NFC">contactless</span>
-                  <span class="material-symbols-outlined text-[20px]" title="Credit/Debit Card">credit_card</span>
-                  <span class="material-symbols-outlined text-[20px]" title="Online Banking / QR">local_atm</span>
+            <button onclick="submitCheckoutOrder()" class="w-full h-14 rounded-2xl bg-orange-600 hover:bg-orange-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed text-white flex items-center justify-between px-5 transition-all shadow-lg shadow-orange-600/25 active:scale-[0.98] group relative overflow-hidden" id="tenderBtn" disabled>
+              <!-- Normal Content -->
+              <div id="tenderBtnNormalContent" class="w-full flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[24px]">payments</span>
+                  </span>
+                  <span id="tenderBtnLabel" class="font-headline-md text-xl font-black uppercase tracking-wider text-white">PAY NOW</span>
                 </div>
-                <span class="material-symbols-outlined text-[26px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-1.5 opacity-85 group-hover:opacity-100 transition-opacity">
+                    <span class="material-symbols-outlined text-[20px]" title="Tap to Pay / NFC">contactless</span>
+                    <span class="material-symbols-outlined text-[20px]" title="Credit/Debit Card">credit_card</span>
+                    <span class="material-symbols-outlined text-[20px]" title="Online Banking / QR">local_atm</span>
+                  </div>
+                  <span class="material-symbols-outlined text-[26px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </div>
+              </div>
+
+              <!-- Loading State -->
+              <div id="tenderBtnLoadingContent" class="hidden w-full items-center justify-center gap-3">
+                <svg class="animate-spin h-6 w-6 text-white shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                  <path class="opacity-95" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+                <div class="flex items-center gap-1.5 font-headline-md text-base font-extrabold uppercase tracking-widest text-white drop-shadow">
+                  <span>Connecting Secure Gateway</span>
+                  <span class="inline-flex gap-1 ml-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay:0s;"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay:0.18s;"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay:0.36s;"></span>
+                  </span>
+                </div>
               </div>
             </button>
           </div>
@@ -798,8 +827,31 @@
         if (subtotalLbl) subtotalLbl.textContent = `Subtotal (${totalQty} ${totalQty === 1 ? "item" : "items"})`;
         if (subtotalVal) subtotalVal.textContent = formatRM(totalAmount);
         if (totalVal) totalVal.textContent = formatRM(totalAmount);
-        if (tenderBtnLabel) tenderBtnLabel.textContent = isSubmittingOrder ? "STARTING PAYMENT..." : "PAY NOW";
-        if (tenderBtn) tenderBtn.disabled = entries.length === 0 || isSubmittingOrder;
+
+        const tenderBtnNormal = document.getElementById("tenderBtnNormalContent");
+        const tenderBtnLoading = document.getElementById("tenderBtnLoadingContent");
+        if (isSubmittingOrder) {
+          if (tenderBtnNormal) tenderBtnNormal.classList.add("hidden");
+          if (tenderBtnLoading) {
+            tenderBtnLoading.classList.remove("hidden");
+            tenderBtnLoading.classList.add("flex");
+          }
+          if (tenderBtn) {
+            tenderBtn.classList.add("btn-shimmer-active", "pointer-events-none", "cursor-wait");
+            tenderBtn.disabled = false;
+          }
+        } else {
+          if (tenderBtnNormal) tenderBtnNormal.classList.remove("hidden");
+          if (tenderBtnLoading) {
+            tenderBtnLoading.classList.add("hidden");
+            tenderBtnLoading.classList.remove("flex");
+          }
+          if (tenderBtn) {
+            tenderBtn.classList.remove("btn-shimmer-active", "pointer-events-none", "cursor-wait");
+            tenderBtn.disabled = (entries.length === 0);
+          }
+        }
+
         if (mobileBubble) mobileBubble.textContent = String(totalQty);
         if (mobileTotal) mobileTotal.textContent = formatRM(totalAmount);
 
