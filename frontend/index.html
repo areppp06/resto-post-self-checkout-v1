@@ -55,16 +55,6 @@
       background-color: #fff7ed !important;
       outline: 2px solid #ea580c !important;
     }
-    @keyframes paymentShimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-    .btn-shimmer-active {
-      background: linear-gradient(90deg, #ea580c 0%, #f97316 25%, #ffedd5 50%, #f97316 75%, #ea580c 100%) !important;
-      background-size: 200% 100% !important;
-      animation: paymentShimmer 1.5s linear infinite !important;
-      box-shadow: 0 12px 30px -4px rgba(234, 88, 12, 0.5) !important;
-    }
   </style>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <script id="tailwind-config">
@@ -289,19 +279,12 @@
               </div>
 
               <!-- Loading State -->
-              <div id="tenderBtnLoadingContent" class="hidden w-full items-center justify-center gap-3">
-                <svg class="animate-spin h-6 w-6 text-white shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <div id="tenderBtnLoadingContent" class="hidden w-full items-center justify-center gap-2.5">
+                <svg class="animate-spin h-5 w-5 text-white shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
                   <path class="opacity-95" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                 </svg>
-                <div class="flex items-center gap-1.5 font-headline-md text-base font-extrabold uppercase tracking-widest text-white drop-shadow">
-                  <span>Connecting Secure Gateway</span>
-                  <span class="inline-flex gap-1 ml-1">
-                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay:0s;"></span>
-                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay:0.18s;"></span>
-                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay:0.36s;"></span>
-                  </span>
-                </div>
+                <span class="font-headline-md text-xl font-black uppercase tracking-wider text-white">Paying...</span>
               </div>
             </button>
           </div>
@@ -837,7 +820,7 @@
             tenderBtnLoading.classList.add("flex");
           }
           if (tenderBtn) {
-            tenderBtn.classList.add("btn-shimmer-active", "pointer-events-none", "cursor-wait");
+            tenderBtn.classList.add("pointer-events-none", "cursor-wait");
             tenderBtn.disabled = false;
           }
         } else {
@@ -847,7 +830,7 @@
             tenderBtnLoading.classList.remove("flex");
           }
           if (tenderBtn) {
-            tenderBtn.classList.remove("btn-shimmer-active", "pointer-events-none", "cursor-wait");
+            tenderBtn.classList.remove("pointer-events-none", "cursor-wait");
             tenderBtn.disabled = (entries.length === 0);
           }
         }
