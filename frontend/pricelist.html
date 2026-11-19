@@ -240,8 +240,8 @@ body {
   <div class="top-nav">
     <a href="/" class="back-link">
       <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-      <span data-lang="bm">Utama</span>
-      <span data-lang="en" style="display:none;">Home</span>
+      <span data-lang="bm">Kembali ke Kiosk</span>
+      <span data-lang="en" style="display:none;">Back to Kiosk</span>
     </a>
     <div class="lang-toggle" role="tablist">
       <button type="button" class="lang-btn active" id="lang-bm" onclick="setLanguage('bm')">BM</button>
@@ -292,22 +292,17 @@ body {
       }
 
       container.innerHTML = dishes.map((d, index) => {
-        const pieces = d.pieces_per_portion || 1;
         const price = Number(d.price).toFixed(2);
-        
-        // Only show pieces/portion if applicable (> 1)
-        let portionDetail = '';
-        if (pieces > 1) {
-          portionDetail = `<div style="font-size:0.8rem; color:#64748b; margin-top:0.15rem;">${pieces} ${isBM ? 'ketul sepinggan' : 'pcs per portion'}</div>`;
-        }
-
+        const cats = Array.isArray(d.categories) && d.categories.length
+          ? `<div style="font-size:0.76rem; color:#64748b; margin-top:0.15rem;">${d.categories.join(" • ")}</div>`
+          : '';
         const borderBottom = (index === dishes.length - 1) ? '' : 'border-bottom: 1px solid #f1f5f9;';
 
         return `
           <div style="display:flex; justify-content:space-between; align-items:baseline; padding:0.85rem 0.2rem; ${borderBottom}">
             <div style="padding-right:1rem;">
               <div style="font-weight:600; color:#0f172a; font-size:0.95rem;">${d.name}</div>
-              ${portionDetail}
+              ${cats}
             </div>
             <div style="font-weight:700; color:#ff5e36; font-size:1.05rem; white-space:nowrap;">
               RM ${price}
@@ -360,8 +355,6 @@ body {
       <a href="/about" class="footer-link"><span data-lang="bm">Tentang Kami</span><span data-lang="en" style="display:none;">About Us</span></a>
       <span class="dot">•</span>
       <a href="/pricelist" class="footer-link"><span data-lang="bm">Senarai Harga</span><span data-lang="en" style="display:none;">Menu Prices</span></a>
-      <span class="dot">•</span>
-      <a href="/guide" class="footer-link"><span data-lang="bm">Panduan</span><span data-lang="en" style="display:none;">How to Use</span></a>
     </div>
     <div class="footer-brand">
       &copy; 2026 <span class="dyn-restaurant-name">Gerai TakCakap</span> &bull; PRISM e-Cashier

@@ -189,10 +189,9 @@ def generate_and_seed_database(num_transactions: int = 95):
         # Real system void reasons guaranteed representation
         guaranteed_void_reasons = (
             ["Bill timed out"] * 6
-            + ["Customer Cancelled"] * 4
+            + ["Customer Cancelled"] * 5
             + ["Needed Cashier Assistance"] * 2
-            + ["Exceeded 3 Retries Limit"] * 2
-            + ["Voided by Admin"] * 1
+            + ["Voided by Admin"] * 2
         )
         random.shuffle(guaranteed_void_reasons)
         void_reasons_map = {idx: guaranteed_void_reasons[i] for i, idx in enumerate(sorted(void_indices))}
@@ -210,37 +209,16 @@ def generate_and_seed_database(num_transactions: int = 95):
 
         def create_tray_items():
             tray = []
-            rice = next((d for d in dish_pool if "rice" in d["name"].lower()), {"name": "Rice", "price": 1.0})
-            rice_qty = random.choice([1, 1, 1, 2])
-            tray.append({
-                "name": rice["name"],
-                "price": rice["price"],
-                "quantity": rice_qty,
-                "subtotal": round(rice["price"] * rice_qty, 2)
-            })
-
-            proteins = [d for d in dish_pool if any(k in d["name"].lower() for k in ["chicken", "beef", "fish", "lamb", "catfish", "bawal", "sotong"])]
-            chosen_proteins = random.sample(proteins, k=random.choice([1, 1, 2]))
-            for p in chosen_proteins:
-                qty = 1
+            k = min(len(dish_pool), random.choice([1, 2, 2, 3, 4]))
+            chosen = random.sample(dish_pool, k=k)
+            for item in chosen:
+                qty = random.choice([1, 1, 1, 2])
                 tray.append({
-                    "name": p["name"],
-                    "price": p["price"],
+                    "name": item["name"],
+                    "price": item["price"],
                     "quantity": qty,
-                    "subtotal": round(p["price"] * qty, 2)
+                    "subtotal": round(item["price"] * qty, 2)
                 })
-
-            sides = [d for d in dish_pool if any(k in d["name"].lower() for k in ["vegetables", "bendi", "egg", "cili"])]
-            if sides:
-                chosen_sides = random.sample(sides, k=random.choice([1, 1, 2]))
-                for s in chosen_sides:
-                    qty = random.choice([1, 1, 2]) if "egg" in s["name"].lower() or "cili" in s["name"].lower() else 1
-                    tray.append({
-                        "name": s["name"],
-                        "price": s["price"],
-                        "quantity": qty,
-                        "subtotal": round(s["price"] * qty, 2)
-                    })
             return tray
 
         created_bills = []

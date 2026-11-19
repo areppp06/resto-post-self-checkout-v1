@@ -1,14 +1,28 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
+class CategoryBase(BaseModel):
+    name: str
+    icon: Optional[str] = "restaurant"
+    sort_order: Optional[int] = 0
+
+class CategoryCreate(CategoryBase):
+    pass
+
+class Category(CategoryBase):
+    id: int
+    class Config:
+        from_attributes = True
+
 class DishBase(BaseModel):
     name: str
-    alias: Optional[str] = ""
     price: float
     available: bool = True
     unit: str = "portion"
     description: Optional[str] = ""
-    pieces_per_portion: Optional[int] = 1
+    categories: Optional[List[str]] = []
+    image_url: Optional[str] = ""
+    sort_order: Optional[int] = 0
 
 class DishCreate(DishBase):
     pass
@@ -18,21 +32,23 @@ class Dish(DishBase):
     class Config:
         from_attributes = True
 
-class AIItem(BaseModel):
-    name: str
-    quantity: float
-
-class AIResponse(BaseModel):
-    items: List[AIItem]
-    error_code: Optional[str] = None
-    error_message: Optional[str] = None
-
 class BillItem(BaseModel):
     name: str
     quantity: float
     unit_price: float
     subtotal: float
     piece_count: Optional[int] = None
+
+class AIItem(BaseModel):
+    name: str
+    quantity: float = Field(gt=0)
+    confidence: float = Field(ge=0.0, le=1.0)
+    piece_count: Optional[int] = None
+
+class AIResponse(BaseModel):
+    is_valid_plate: bool
+    rejection_reason: Optional[str] = ""
+    items: List[AIItem] = []
 
 class BillResponse(BaseModel):
     items: List[BillItem]
@@ -43,12 +59,12 @@ class BillResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error_code: str
     message: str
-    retake_required: bool = True
+    retake_required: bool = False
 
 class VerifyRequest(BaseModel):
     session_id: str
     pin: str
-    corrections: List[dict]  # [{"name": "Chicken", "quantity": 2}, ...]
+    corrections: List[dict]
     cf_turnstile_response: str = Field(default="", alias="cf-turnstile-response")
 
     class Config:

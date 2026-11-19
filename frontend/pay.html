@@ -648,6 +648,7 @@ input[type="email"]:focus,
 <body style="max-width: 100%; margin: 0px auto; padding: 1.5rem 1rem 2.5rem; background: rgb(233, 238, 245); color: rgb(15, 23, 42);">
 <div class="header" style="max-width: 480px; margin: 0 auto 1.25rem auto; padding: 0 0.25rem; display: flex; align-items: center; justify-content: space-between;">
 <h1>Bill Payment</h1>
+<button type="button" class="btn-retake" onclick="handleEditOrderClick()" style="padding: 0.45rem 0.95rem; font-size: 0.8rem;">&larr; Back to Kiosk</button>
 </div>
 <div class="bill-card" style="max-width: 480px; width: 100%; margin: 0px auto; padding: 2.25rem 1.75rem 2.5rem; background: rgb(255, 255, 255); mask-image: radial-gradient(9px at 50% 0px, transparent 9px, black 9.5px), radial-gradient(9px at 50% 100%, transparent 9px, black 9.5px); mask-position: 0px 0px, 0px 100%; mask-size: 24px 51%; mask-repeat: repeat-x; box-shadow: rgba(15, 23, 42, 0.14) 0px 18px 30px, rgba(15, 23, 42, 0.08) 0px 2px 6px; border-radius: 0px;">
 <div class="summary-header">
@@ -675,7 +676,7 @@ input[type="email"]:focus,
 </div>
 <label class="confirm-wrapper">
 <input id="confirmItems" type="checkbox">
-<span class="confirm-text">I confirm that all listed dishes and quantities on my plate are accurate.</span>
+<span class="confirm-text">I confirm that all listed items and quantities in my order are accurate.</span>
 </label>
 <div class="turnstile-slot" id="pay-turnstile"></div>
 <div id="turnstileHelp" style="display:none; color:#ea580c; text-align:center; font-size:0.85rem; margin-top:0.35rem; font-weight:500;">Please tick the verification box above to continue.</div>
@@ -956,23 +957,19 @@ function closeVoidPrompt() {
   document.getElementById("voidPromptModal").classList.remove("open");
 }
 
-async function handleRetakeClick() {
-  if (currentRetakesLeft <= 0) {
-    document.getElementById("voidPromptModal").classList.add("open");
+async function handleEditOrderClick() {
+  if (!sessionId) {
+    location.href = "/";
     return;
   }
   try {
-    const res = await fetch("/api/sessions/" + encodeURIComponent(sessionId) + "/start-retake", {
+    await fetch("/api/sessions/" + encodeURIComponent(sessionId) + "/start-edit", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({ client_token: getClientToken() })
     });
-    if (res.status === 409) {
-      document.getElementById("voidPromptModal").classList.add("open");
-      return;
-    }
   } catch (e) {}
-  location.href = "/?retake=" + encodeURIComponent(sessionId);
+  location.href = "/?edit=" + encodeURIComponent(sessionId);
 }
 
 async function confirmVoidBill() {
@@ -1115,8 +1112,7 @@ function downloadPayVoidReceiptPdf() {
   let y = curY + 11.5;
   doc.setFontSize(8);
   items.forEach((item) => {
-    const pcs = item.piece_count ? ` (${item.piece_count} pcs)` : "";
-    const label = `${item.name} x${item.quantity}${pcs}`;
+    const label = `${item.name} x${item.quantity}`;
     const sub = Number(item.subtotal || 0).toFixed(2);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(15, 23, 42);
@@ -1192,10 +1188,9 @@ function renderVoidedBillView(data) {
   if (data.items && data.items.length) {
     itemsHtml = '<div class="item-list" style="margin-bottom:0.75rem; opacity:0.8;">';
     data.items.forEach(item => {
-      const pieces = item.piece_count ? `<span class="item-pieces">(${esc(item.piece_count)} pcs)</span>` : "";
       itemsHtml += `
         <div class="item">
-          <span class="item-name">${esc(item.name)} <span style="color:#94a3b8; font-weight:400;">× ${esc(item.quantity)}</span>${pieces}</span>
+          <span class="item-name">${esc(item.name)} <span style="color:#94a3b8; font-weight:400;">× ${esc(item.quantity)}</span></span>
           <span class="item-price">RM ${Number(item.subtotal).toFixed(2)}</span>
         </div>`;
     });
@@ -1218,7 +1213,7 @@ function renderVoidedBillView(data) {
       </div>
       <div style="display:flex; gap:0.55rem; width:100%; margin-top:0.45rem; flex-wrap:wrap;">
         <button class="btn btn-secondary" type="button" style="flex:1; margin-top:0; padding:0.7rem 0.9rem; font-size:0.85rem;" onclick="downloadPayVoidReceiptPdf()">Save Void Receipt (PDF)</button>
-        <button class="btn" type="button" style="flex:1; margin-top:0; padding:0.7rem 0.9rem; font-size:0.85rem; background:#0f172a; box-shadow:none;" onclick="location.href='/'">Back to Scanner</button>
+        <button class="btn" type="button" style="flex:1; margin-top:0; padding:0.7rem 0.9rem; font-size:0.85rem; background:#0f172a; box-shadow:none;" onclick="location.href='/'">Back to Kiosk</button>
       </div>
     </div>`;
   form.hidden = true;
@@ -1261,28 +1256,18 @@ async function load() {
       badge.hidden = false;
     }
 
-    currentRetakesLeft = data.retakes_left !== undefined ? Number(data.retakes_left) : 4;
-    const retakeVer = data.retake_count || 0;
-    const retryLabel = currentRetakesLeft === 1 ? "1 retry left" : `${currentRetakesLeft} retries left`;
-    const retryNoteText = currentRetakesLeft > 0
-      ? `You can retake up to ${currentRetakesLeft} more ${currentRetakesLeft === 1 ? 'time' : 'times'} for this bill.`
-      : `0 retries left — clicking Retake Photo again will void this bill and require payment at the counter.`;
-
     let html = '<div class="item-list">';
     data.items.forEach(item => {
-      const pieces = item.piece_count ? `<span class="item-pieces">(${esc(item.piece_count)} pcs)</span>` : "";
       html += `
         <div class="item">
-          <span class="item-name">${esc(item.name)} <span style="color:#94a3b8; font-weight:400;">× ${esc(item.quantity)}</span>${pieces}</span>
+          <span class="item-name">${esc(item.name)} <span style="color:#94a3b8; font-weight:400;">× ${esc(item.quantity)}</span></span>
           <span class="item-price">RM ${Number(item.subtotal).toFixed(2)}</span>
         </div>`;
     });
     html += '</div>';
     html += `
       <div class="plate-preview-row" id="platePreviewRow">
-        <img class="plate-preview-img" src="/api/sessions/${encodeURIComponent(sessionId)}/image?v=${encodeURIComponent(retakeVer)}" alt="Captured plate" title="Tap to view full photo" onclick="openPhotoLightbox(this.src)" onerror="this.style.display='none'">
-        <button class="btn-retake" type="button" onclick="handleRetakeClick()">Retake Photo (${esc(retryLabel)})</button>
-        <div class="retry-note ${currentRetakesLeft <= 0 ? 'warn' : ''}">${esc(retryNoteText)}</div>
+        <button class="btn-retake" type="button" onclick="handleEditOrderClick()">Edit Order Items</button>
       </div>`;
     html += '<div class="total-divider"></div>';
     html += `

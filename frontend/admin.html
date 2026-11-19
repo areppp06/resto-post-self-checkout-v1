@@ -4,10 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
-<title>AFRC Admin Dashboard</title>
+<title>Self-Checkout Admin Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -1684,6 +1685,255 @@
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
   }
+
+  /* Categories & Menu Photo Custom Styles */
+  .cat-pick-pill,
+  .cat-tag-pill {
+    appearance: none;
+    -webkit-appearance: none;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    padding: 0.38rem 0.78rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.1;
+    background: #f8fafc;
+    color: #475569;
+    border: 1.5px solid #cbd5e1;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.16s ease;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    white-space: nowrap;
+  }
+  .cat-pick-pill:hover,
+  .cat-tag-pill:hover {
+    border-color: #f97316;
+    color: #ea580c;
+    background: #fff7ed;
+    transform: translateY(-1px);
+  }
+  .cat-pick-pill.selected,
+  .cat-tag-pill.selected {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    color: #c2410c;
+    border-color: #f97316;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(249, 115, 22, 0.16);
+  }
+  .cat-pick-pill .material-symbols-outlined,
+  .cat-tag-pill .material-symbols-outlined {
+    font-size: 15px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    transition: color 0.15s ease;
+  }
+  .cat-pick-pill:hover .material-symbols-outlined,
+  .cat-pick-pill.selected .material-symbols-outlined {
+    color: #ea580c;
+  }
+  .cat-pick-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #ea580c;
+    color: #ffffff;
+    font-size: 0.62rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .cat-picker-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+    align-items: center;
+  }
+  .cat-picker-meta {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 0.32rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .menu-drag-row {
+    transition: background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  }
+  .menu-drag-row.dragging {
+    opacity: 0.42;
+    background: #fff7ed !important;
+  }
+  .menu-drag-row.drag-over td {
+    background: #fff7ed !important;
+    box-shadow: inset 0 2px 0 #ff5e36, inset 0 -2px 0 #ff5e36;
+  }
+  .menu-mobile-card.dragging {
+    opacity: 0.45;
+    border-color: #ff5e36;
+    background: #fff7ed;
+  }
+  .menu-mobile-card.drag-over {
+    border-color: #ff5e36;
+    box-shadow: 0 0 0 3px rgba(255, 94, 54, 0.15);
+  }
+  .menu-order-box {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .menu-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    cursor: grab;
+    padding: 0.25rem 0.3rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    line-height: 1;
+    user-select: none;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .menu-drag-handle:hover {
+    color: #ea580c;
+    background: #fff7ed;
+  }
+  .menu-order-arrows {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .menu-arrow-btn {
+    appearance: none;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    border-radius: 4px;
+    width: 20px;
+    height: 16px;
+    font-size: 0.62rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.12s ease;
+  }
+  .menu-arrow-btn:hover:not(:disabled) {
+    border-color: #f97316;
+    color: #ea580c;
+    background: #fff7ed;
+  }
+  .menu-arrow-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .menu-photo-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .menu-photo-thumb {
+    width: 56px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    cursor: zoom-in;
+    flex-shrink: 0;
+  }
+  .menu-photo-placeholder {
+    width: 56px;
+    height: 44px;
+    border-radius: 8px;
+    border: 1.5px dashed #cbd5e1;
+    background: #f8fafc;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .cat-drag-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .cat-drag-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    padding: 0.85rem 1.1rem;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    transition: all 0.15s ease;
+    cursor: grab;
+  }
+  .cat-drag-item:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  }
+  .cat-drag-item.dragging {
+    opacity: 0.45;
+    border-color: #ff5e36;
+    background: #fff7ed;
+  }
+  .cat-drag-item.drag-over {
+    border-color: #ff5e36;
+    box-shadow: 0 0 0 3px rgba(255, 94, 54, 0.15);
+  }
+  .cat-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    cursor: grab;
+    padding: 0.25rem;
+  }
+  .icon-picker-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .icon-choice-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .icon-choice-btn:hover {
+    border-color: #94a3b8;
+    color: #0f172a;
+  }
+  .icon-choice-btn.active {
+    background: #fff7ed;
+    border-color: #ff5e36;
+    color: #ea580c;
+  }
 </style>
 </head>
 <body>
@@ -1719,6 +1969,14 @@
         <span>Daily Menu</span>
       </span>
     </button>
+    <button class="nav-btn" data-tab="categories" onclick="switchTab('categories', 'Menu Categories Management')">
+      <span class="nav-btn-left">
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+        <span>Categories</span>
+      </span>
+    </button>
     <button class="nav-btn" data-tab="restaurant" onclick="switchTab('restaurant', 'Restaurant Settings')">
       <span class="nav-btn-left">
         <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24" aria-hidden="true">
@@ -1744,24 +2002,16 @@
         <span>Audit Log</span>
       </span>
     </button>
-    <button class="nav-btn" data-tab="archives" onclick="switchTab('archives', 'Scan Archives & Failed Photos')">
-      <span class="nav-btn-left">
-        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" stroke-linecap="round" stroke-linejoin="round"></path>
-        </svg>
-        <span>Archives</span>
-      </span>
-    </button>
   </div>
 
   <div class="sidebar-footer">
     <div class="nav-label">Quick Links</div>
     <a class="ext-link" href="/" target="_blank">
       <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 8a2 2 0 012-2h2l1.5-2h5L16 6h2a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8z" stroke-linecap="round" stroke-linejoin="round"></path>
-        <circle cx="12" cy="12.5" r="3.2"></circle>
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke-linecap="round" stroke-linejoin="round"></path>
+        <polyline points="9 22 9 12 15 12 15 22" stroke-linecap="round" stroke-linejoin="round"></polyline>
       </svg>
-      <span>Customer Camera View</span>
+      <span>Back to Kiosk</span>
     </a>
   </div>
 
@@ -1885,10 +2135,6 @@
                   <span class="swatch-line green"></span>
                   <span>Paid Bills</span>
                 </button>
-                <button class="svg-legend-toggle" data-series="scans" type="button" aria-pressed="true" onclick="toggleSalesSeries('scans')">
-                  <span class="swatch-line blue"></span>
-                  <span>Scanned Images</span>
-                </button>
                 <button class="svg-legend-toggle" data-series="revenue" type="button" aria-pressed="true" onclick="toggleSalesSeries('revenue')">
                   <span class="swatch-bar"></span>
                   <span>Paid Revenue (RM)</span>
@@ -1946,12 +2192,11 @@
         <div class="panel-header">
           <div class="panel-title">All Logged Bills</div>
           <div class="filter-bar">
-            <input class="search-input" id="billSearch" oninput="onBillSearchInput()" placeholder="Search Bill #AAA-0001, dish, void cause..." type="text">
+            <input class="search-input" id="billSearch" oninput="onBillSearchInput()" placeholder="Search Bill #AAA-0001, dish, contact..." type="text">
             <div class="filter-pills">
               <button class="pill-filter active" data-status="all" onclick="setStatusFilter('all', this)">All</button>
               <button class="pill-filter" data-status="paid" onclick="setStatusFilter('paid', this)">Paid</button>
               <button class="pill-filter" data-status="open" onclick="setStatusFilter('open', this)">Pending</button>
-              <button class="pill-filter" data-status="void" onclick="setStatusFilter('void', this)">Void</button>
             </div>
           </div>
         </div>
@@ -1965,7 +2210,6 @@
                 <th>Contacts</th>
                 <th>Total (RM)</th>
                 <th>Status</th>
-                <th>Photo</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -1986,10 +2230,10 @@
         <div class="panel-header" onclick="toggleAddDishForm()">
           <div>
             <div class="panel-title" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-              <span>Add New Dish to Menu</span>
+              <span>Add New Menu Item</span>
               <span class="mobile-only-badge" id="addDishToggleBadge">Tap to open</span>
             </div>
-            <p class="add-dish-subtext" style="font-size:0.8rem; color:#64748b; margin-top:0.2rem;">Names added here are the exact names the AI vision model returns. Use Description to describe what 1 serving looks like.</p>
+            <p class="add-dish-subtext" style="font-size:0.8rem; color:#64748b; margin-top:0.2rem;">Add a menu item with a photo, price, up to 3 categories, and an optional description for the self-checkout kiosk.</p>
           </div>
           <button type="button" class="btn btn-outline btn-sm mobile-add-toggle-btn" id="addDishToggleBtn" aria-label="Toggle add dish form">
             <svg style="width:16px; height:16px; transition:transform 0.2s ease;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" id="addDishChevron">
@@ -1998,34 +2242,48 @@
           </button>
         </div>
         <div class="panel-body" id="addDishBody">
-          <form class="menu-form-grid" onsubmit="addDish(event)" novalidate>
-            <label class="field-label">AI Dish Name
-              <input class="input-box" id="newName" placeholder="e.g. Ayam goreng" required type="text">
-            </label>
-            <label class="field-label">Customer Alias (optional)
-              <input class="input-box" id="newAlias" placeholder="e.g. Signature Fried Chicken" type="text">
-            </label>
-            <label class="field-label">Price
-              <div class="price-stepper-wrap">
-                <button type="button" class="price-step-btn" onclick="stepPriceInput('newPrice', -1)" aria-label="Decrease price by 1">−</button>
-                <div class="input-with-prefix">
-                  <span class="currency-prefix">RM</span>
-                  <input class="input-box prefix-input" id="newPrice" min="0" required step="1" type="number" value="1">
+          <form onsubmit="addDish(event)" novalidate style="display:flex; flex-direction:column; gap:1rem;">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:0.85rem; align-items:end;">
+              <label class="field-label">Menu Name
+                <input class="input-box" id="newName" placeholder="e.g. Iced Caramel Macchiato" required type="text">
+              </label>
+              <label class="field-label">Price
+                <div class="price-stepper-wrap">
+                  <button type="button" class="price-step-btn" onclick="stepPriceInput('newPrice', -1)" aria-label="Decrease price by 1">−</button>
+                  <div class="input-with-prefix">
+                    <span class="currency-prefix">RM</span>
+                    <input class="input-box prefix-input" id="newPrice" min="0" required step="0.01" type="number" value="5.00">
+                  </div>
+                  <button type="button" class="price-step-btn" onclick="stepPriceInput('newPrice', 1)" aria-label="Increase price by 1">+</button>
                 </div>
-                <button type="button" class="price-step-btn" onclick="stepPriceInput('newPrice', 1)" aria-label="Increase price by 1">+</button>
+              </label>
+              <label class="field-label">Description (optional)
+                <input class="input-box" id="newDescription" maxlength="500" placeholder="Short description (optional)" type="text">
+              </label>
+              <div class="field-label">Menu Photo
+                <div style="display:flex; align-items:center; gap:0.65rem;">
+                  <div id="newPhotoPreviewBox" class="menu-photo-placeholder">No photo</div>
+                  <input type="file" id="newPhotoFileInput" accept="image/*" style="display:none;" onchange="onNewDishPhotoSelected(event)">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('newPhotoFileInput').click()">Choose Photo</button>
+                </div>
               </div>
-            </label>
-            <label class="field-label">Pieces / Portion
-              <input class="input-box" id="newPieces" max="100" min="1" required step="1" type="number" value="1" style="width:110px;">
-            </label>
-            <label class="field-label">AI Visual Description (optional)
-              <input class="input-box" id="newDescription" maxlength="500" placeholder="e.g. fried chicken piece with crispy skin" type="text">
-            </label>
-            <button class="btn" type="submit">+ Add Dish</button>
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; padding-top:0.35rem; border-top:1px dashed #e2e8f0;">
+              <div style="flex:1; min-width:240px;">
+                <div style="font-size:0.78rem; font-weight:700; color:#475569; margin-bottom:0.35rem;">
+                  Tag Categories <span style="font-weight:500; color:#94a3b8;">(Select up to 3)</span>
+                </div>
+                <div class="cat-picker-wrap" id="newDishCategoriesPicker"></div>
+              </div>
+              <button class="btn" type="submit" id="btnAddDishSubmit">+ Add Menu Item</button>
+            </div>
           </form>
           <p id="error" style="color:#ef4444; font-size:0.84rem; margin-top:0.6rem; min-height:1.1rem;"></p>
         </div>
       </div>
+
+      <input type="file" id="dishRowPhotoInput" accept="image/*" style="display:none;" onchange="handleDishRowPhotoSelected(event)">
 
       <div class="panel-card">
         <div class="panel-header">
@@ -2067,7 +2325,7 @@
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" id="menuSearchInput" class="search-input" placeholder="Search dish name, alias, description..." oninput="filterMenuItems()" onkeydown="if(event.key==='Escape')clearMenuSearch()" style="width: 100%; padding-left: 2.35rem; padding-right: 2.2rem; font-size: 0.86rem; box-sizing: border-box; background: #ffffff;">
+            <input type="text" id="menuSearchInput" class="search-input" placeholder="Search menu name, category, description..." oninput="filterMenuItems()" onkeydown="if(event.key==='Escape')clearMenuSearch()" style="width: 100%; padding-left: 2.35rem; padding-right: 2.2rem; font-size: 0.86rem; box-sizing: border-box; background: #ffffff;">
             <button type="button" id="clearMenuSearchBtn" onclick="clearMenuSearch()" style="position: absolute; right: 0.65rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.15rem; line-height: 1; padding: 2px 4px; display: none;" title="Clear search">&times;</button>
           </div>
           <div id="menuItemsCount" style="font-size: 0.82rem; color: #64748b; font-weight: 500;">
@@ -2079,10 +2337,11 @@
           <table id="menuTable">
             <thead>
               <tr>
-                <th style="min-width:140px;">AI Dish Name</th>
-                <th style="min-width:160px;">Customer Alias</th>
-                <th>Description for AI</th>
-                <th style="width:110px;">Pieces / Portion</th>
+                <th style="width:96px;">Order</th>
+                <th style="width:130px;">Photo</th>
+                <th style="min-width:170px;">Menu Name</th>
+                <th style="min-width:240px;">Categories (Max 3)</th>
+                <th style="min-width:200px;">Description</th>
                 <th style="width:190px;">Price</th>
                 <th style="width:100px; text-align:center;">Available Today</th>
                 <th style="width:80px;"></th>
@@ -2092,6 +2351,58 @@
           </table>
         </div>
         <div class="menu-mobile-list" id="menuMobileList"></div>
+      </div>
+    </section>
+
+    <!-- TAB: CATEGORIES -->
+    <section class="section-pane" id="tab-categories">
+      <div class="panel-card">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Add New Category</div>
+            <p style="font-size:0.8rem; color:#64748b; margin-top:0.2rem;">Create categories for organizing menu items on the self-checkout kiosk. Each menu item can be tagged with up to 3 categories.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <form onsubmit="handleAddCategory(event)" style="display:flex; flex-direction:column; gap:1rem;">
+            <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end;">
+              <label class="field-label" style="flex:1; min-width:220px;">Category Name
+                <input type="text" id="newCatNameInput" class="input-box" placeholder="e.g. Coffee &amp; Espresso, Bakery, Cold Drinks" maxlength="60" required>
+              </label>
+              <div class="field-label">Icon
+                <div class="icon-picker-grid" id="newCatIconPicker">
+                  <button type="button" class="icon-choice-btn active" data-icon="restaurant" onclick="selectNewCatIcon('restaurant', this)" title="Restaurant"><span class="material-symbols-outlined" style="font-size:18px;">restaurant</span></button>
+                  <button type="button" class="icon-choice-btn" data-icon="coffee" onclick="selectNewCatIcon('coffee', this)" title="Coffee"><span class="material-symbols-outlined" style="font-size:18px;">coffee</span></button>
+                  <button type="button" class="icon-choice-btn" data-icon="bakery_dining" onclick="selectNewCatIcon('bakery_dining', this)" title="Bakery"><span class="material-symbols-outlined" style="font-size:18px;">bakery_dining</span></button>
+                  <button type="button" class="icon-choice-btn" data-icon="lunch_dining" onclick="selectNewCatIcon('lunch_dining', this)" title="Lunch / Sandwich"><span class="material-symbols-outlined" style="font-size:18px;">lunch_dining</span></button>
+                  <button type="button" class="icon-choice-btn" data-icon="glass_cup" onclick="selectNewCatIcon('glass_cup', this)" title="Cold Drinks"><span class="material-symbols-outlined" style="font-size:18px;">glass_cup</span></button>
+                  <button type="button" class="icon-choice-btn" data-icon="cake" onclick="selectNewCatIcon('cake', this)" title="Desserts &amp; Cake"><span class="material-symbols-outlined" style="font-size:18px;">cake</span></button>
+                  <button type="button" class="icon-choice-btn" data-icon="dinner_dining" onclick="selectNewCatIcon('dinner_dining', this)" title="Main Dish"><span class="material-symbols-outlined" style="font-size:18px;">dinner_dining</span></button>
+                  <button type="button" class="icon-choice-btn" data-icon="tapas" onclick="selectNewCatIcon('tapas', this)" title="Sides &amp; Snacks"><span class="material-symbols-outlined" style="font-size:18px;">tapas</span></button>
+                  <button type="button" class="icon-choice-btn" data-icon="local_pizza" onclick="selectNewCatIcon('local_pizza', this)" title="Pizza / Fast Food"><span class="material-symbols-outlined" style="font-size:18px;">local_pizza</span></button>
+                  <button type="button" class="icon-choice-btn" data-icon="ramen_dining" onclick="selectNewCatIcon('ramen_dining', this)" title="Noodles / Bowls"><span class="material-symbols-outlined" style="font-size:18px;">ramen_dining</span></button>
+                </div>
+              </div>
+              <button type="submit" class="btn" id="btnAddCategorySubmit">+ Add Category</button>
+            </div>
+          </form>
+          <p id="categoryError" style="color:#ef4444; font-size:0.84rem; margin-top:0.5rem; min-height:1rem;"></p>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Arrange Categories Order (Drag &amp; Drop)</div>
+            <p style="font-size:0.8rem; color:#64748b; margin-top:0.2rem;">Drag and drop rows (or use the up/down arrows) to arrange the exact order categories appear on the kiosk front page.</p>
+          </div>
+          <span id="catOrderSaveBadge" style="font-size:0.78rem; font-weight:600; color:#10b981;">Order synced</span>
+        </div>
+        <div class="panel-body">
+          <div class="cat-drag-list" id="categoriesDragList">
+            <div class="empty-state-sm">Loading categories...</div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -2109,7 +2420,7 @@
               <span>Daily Operating Hours</span>
             </div>
             <p style="font-size:0.82rem; color:#64748b; margin-top:0.25rem;">
-              Set restaurant operating hours (default 08:00 to 17:00). Outside these hours, AI scanning is disabled on server side.
+              Set restaurant operating hours (default 08:00 to 17:00). Outside these hours, self-checkout ordering is disabled on server side.
             </p>
           </div>
         </div>
@@ -2165,7 +2476,7 @@
               <span>System &amp; Kiosk Availability</span>
             </div>
             <p style="font-size:0.82rem; color:#64748b; margin-top:0.25rem;">
-              Control public access to the customer scanner kiosk.
+              Control public access to the customer self-checkout kiosk.
             </p>
           </div>
         </div>
@@ -2181,7 +2492,7 @@
                   <span id="badgeMaintenance" class="badge" style="background:#e2e8f0; color:#475569; font-size:0.75rem; padding:0.2rem 0.55rem; border-radius:999px;">Disabled</span>
                 </div>
                 <p style="font-size:0.82rem; color:#64748b; line-height:1.45; margin:0;">
-                  When switched on, redirects customer kiosk visitors to the <strong>Maintenance</strong> page and pauses scanning for system upkeep.
+                  When switched on, redirects customer kiosk visitors to the <strong>Maintenance</strong> page and pauses ordering for system upkeep.
                 </p>
               </div>
               <div style="flex-shrink:0;">
@@ -2287,7 +2598,6 @@
                   <th style="min-width:130px;">Date &amp; Time</th>
                   <th style="min-width:110px;">Paid Bill #</th>
                   <th style="min-width:120px;">Customer Phone</th>
-                  <th style="width:90px; text-align:center;">Plate Photo</th>
                   <th style="min-width:125px;">Rating</th>
                   <th style="min-width:160px;">Quick Tags</th>
                   <th>Customer Comment</th>
@@ -2295,7 +2605,7 @@
               </thead>
               <tbody id="feedbacksBody">
                 <tr>
-                  <td colspan="7" style="text-align:center; color:#94a3b8; padding:2rem;">Loading feedbacks...</td>
+                  <td colspan="6" style="text-align:center; color:#94a3b8; padding:2rem;">Loading feedbacks...</td>
                 </tr>
               </tbody>
             </table>
@@ -2317,7 +2627,7 @@
               <tr>
                 <th>Log ID</th>
                 <th>Timestamp</th>
-                <th>Cashier</th>
+                <th>Admin / User</th>
                 <th>Action</th>
                 <th>Details</th>
               </tr>
@@ -2332,167 +2642,11 @@
         </div>
       </div>
     </section>
-
-    <!-- TAB 6: ARCHIVES -->
-    <section class="section-pane" id="tab-archives">
-      <div class="stats-grid" style="margin-bottom: 1.25rem;">
-        <div class="stat-card">
-          <div class="stat-label">Total Failed Scans</div>
-          <div class="stat-value red" id="archiveTotalFailed">0</div>
-          <div class="stat-sub" id="archiveTotalFailedSub">All-time rejection events</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Today's Rejections</div>
-          <div class="stat-value amber" id="archiveTodayFailed">0</div>
-          <div class="stat-sub" id="archiveTodayFailedSub">Logged today</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Retries Tied to Bills</div>
-          <div class="stat-value" id="archiveRetriesCount">0</div>
-          <div class="stat-sub">Failed retakes on customer bills</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Top Rejection Reason</div>
-          <div class="stat-value" style="font-size:1.2rem; word-break:break-word; color:#475569;" id="archiveTopReason">None</div>
-          <div class="stat-sub" id="archiveTopReasonSub">Most common AI error</div>
-        </div>
-      </div>
-
-      <div class="panel-card">
-        <div class="panel-header" style="flex-wrap:wrap; gap:0.75rem;">
-          <div>
-            <div class="panel-title" style="display:flex; align-items:center; gap:0.5rem;">
-              <svg style="width:20px;height:20px;color:#ff5e36;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" stroke-linecap="round" stroke-linejoin="round"></path>
-              </svg>
-              <span>Scan Archives &amp; Failed Photos</span>
-            </div>
-            <div class="stat-sub" style="margin-top:0.2rem;">Inspect AI rejections, unreadable photos, and retry history</div>
-          </div>
-          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-            <button class="btn btn-outline btn-sm" type="button" onclick="loadArchives()">
-              <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-              <span>Refresh Archives</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="panel-body" style="padding-bottom:0.75rem;">
-          <!-- Filter toolbar -->
-          <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
-            <div class="range-pills" id="archivePeriodPills">
-              <button class="range-pill" data-period="today" type="button" onclick="setArchivePeriod('today', this)">Today</button>
-              <button class="range-pill active" data-period="7d" type="button" onclick="setArchivePeriod('7d', this)">Last 7 Days</button>
-              <button class="range-pill" data-period="30d" type="button" onclick="setArchivePeriod('30d', this)">Last 30 Days</button>
-              <button class="range-pill" data-period="all" type="button" onclick="setArchivePeriod('all', this)">All Time</button>
-            </div>
-
-            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-              <select class="input-box" id="archiveCodeFilter" style="width:auto; min-width:160px; padding:0.4rem 0.65rem; font-size:0.82rem;" onchange="onArchiveFilterChange()">
-                <option value="all">All Rejection Types</option>
-                <option value="UNREADABLE_PHOTO">Unreadable / Blurry Photo</option>
-                <option value="NOT_A_PLATE">Not a Food Plate</option>
-                <option value="NO_FOOD_DETECTED">No Food Detected</option>
-                <option value="NO_MATCHING_DISHES">Dishes Not On Menu</option>
-                <option value="AI_SERVICE_ERROR">AI Service Error</option>
-                <option value="IMAGE_TOO_LARGE">Image Too Large</option>
-              </select>
-
-              <select class="input-box" id="archiveTypeFilter" style="width:auto; min-width:130px; padding:0.4rem 0.65rem; font-size:0.82rem;" onchange="onArchiveFilterChange()">
-                <option value="all">All Scans</option>
-                <option value="retries">Retries Only</option>
-                <option value="initial">Initial Scans</option>
-              </select>
-
-              <div style="position:relative;">
-                <input type="text" class="input-box" id="archiveSearchInput" placeholder="Search bill #, reason, IP..." style="padding:0.4rem 0.65rem 0.4rem 2rem; font-size:0.82rem; width:190px;" onkeydown="if(event.key==='Enter') onArchiveFilterChange()">
-                <svg style="position:absolute; left:0.6rem; top:50%; transform:translateY(-50%); width:14px; height:14px; color:#94a3b8;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              </div>
-            </div>
-          </div>
-
-          <!-- Table -->
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th style="width:72px;">Photo</th>
-                  <th style="width:145px;">Timestamp</th>
-                  <th style="width:160px;">Rejection Type</th>
-                  <th>Rejection Details</th>
-                  <th style="width:160px;">Scan Context</th>
-                  <th style="text-align:right; width:170px;">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="archiveTableBody">
-                <tr>
-                  <td colspan="6" style="text-align:center; padding:2rem; color:#94a3b8;">Loading archives...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="audit-mobile-list" id="archiveMobileList"></div>
-
-          <div class="pagination-bar" id="archivePaginationBar" style="margin-top:1rem;">
-            <div class="pagination-info" id="archivePaginationInfo">Showing 0 archives</div>
-            <div class="pagination-controls" id="archivePaginationControls"></div>
-          </div>
-        </div>
-      </div>
-    </section>
   </main>
 </div>
 
 <div class="lightbox" id="photoModal" onclick="this.classList.remove('open')">
-  <img alt="Plate photo" id="photoModalImg" src="">
-</div>
-
-<div class="modal-backdrop" id="archiveModal" onclick="if(event.target===this) closeArchiveModal()">
-  <div class="refund-modal-card" style="max-width:540px;" role="dialog" aria-modal="true" aria-labelledby="archiveModalTitle">
-    <div class="refund-modal-head">
-      <div class="refund-modal-title" id="archiveModalTitle">
-        <span>Failed Scan Inspection</span>
-        <span class="badge" id="archiveModalCodeBadge" style="background:#fee2e2; color:#b91c1c; font-size:0.75rem; padding:0.2rem 0.55rem; border-radius:999px;">CODE</span>
-      </div>
-      <button type="button" class="refund-modal-close" onclick="closeArchiveModal()" aria-label="Close archive preview">&times;</button>
-    </div>
-    <div class="refund-modal-body" style="padding:1.25rem 1.5rem 1.5rem;">
-      <div id="archiveModalImgBox" style="text-align:center; margin-bottom:1.25rem; background:#0f172a; border-radius:14px; overflow:hidden; min-height:180px; display:flex; align-items:center; justify-content:center;">
-        <img id="archiveModalImg" src="" alt="Failed Scan Photo" style="max-width:100%; max-height:340px; object-fit:contain; border-radius:14px;">
-      </div>
-
-      <div style="display:flex; flex-direction:column; gap:0.75rem; font-size:0.85rem;">
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.85rem 1rem;">
-          <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase; margin-bottom:0.25rem;">Rejection Reason</div>
-          <div id="archiveModalReasonText" style="color:#0f172a; font-weight:600; line-height:1.45;">---</div>
-        </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.65rem 0.85rem;">
-            <div style="font-size:0.72rem; color:#64748b; font-weight:600;">Timestamp (MYT)</div>
-            <div id="archiveModalTime" style="font-weight:700; color:#0f172a; margin-top:0.15rem;">---</div>
-          </div>
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.65rem 0.85rem;">
-            <div style="font-size:0.72rem; color:#64748b; font-weight:600;">Context</div>
-            <div id="archiveModalContext" style="font-weight:700; color:#0f172a; margin-top:0.15rem;">---</div>
-          </div>
-        </div>
-
-        <div id="archiveModalAiBox" style="display:none; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:10px; padding:0.65rem 0.85rem;">
-          <div style="font-size:0.72rem; color:#475569; font-weight:700; text-transform:uppercase; margin-bottom:0.25rem;">Raw AI Output</div>
-          <pre id="archiveModalAiPre" style="font-size:0.75rem; color:#334155; white-space:pre-wrap; word-break:break-all; max-height:100px; overflow-y:auto; margin:0; font-family:monospace;"></pre>
-        </div>
-
-        <div id="archiveModalBillActionBox" style="display:none; margin-top:0.5rem; text-align:right;">
-          <button type="button" class="btn btn-dark btn-sm" id="btnArchiveModalViewBill" style="width:100%; justify-content:center;">
-            <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            <span>View Bill PDF Preview</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <img alt="Menu item photo" id="photoModalImg" src="">
 </div>
 <div class="modal-backdrop" id="refundModal" onclick="if(event.target===this) closeRefundModal()">
   <div class="refund-modal-card" role="dialog" aria-modal="true" aria-labelledby="refundModalTitle">
@@ -2589,7 +2743,7 @@ let analyticsQuarter = "";
 let analyticsReqSeq = 0;
 let resizeChartTimer = null;
 let billsTableDirty = true;
-const salesSeriesVisible = { void: true, paid: true, revenue: true, scans: true };
+const salesSeriesVisible = { void: true, paid: true, revenue: true };
 
 function toggleSalesSeries(key) {
   if (!(key in salesSeriesVisible)) return;
@@ -2610,12 +2764,6 @@ let pageSize = 20;
 let totalPages = 1;
 let totalItems = 0;
 let searchDebounceTimer = null;
-
-let archiveCurrentPeriod = "7d";
-let archiveCurrentPage = 1;
-const archivePageSize = 10;
-let archiveTotalPages = 1;
-let currentArchiveItems = [];
 
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
@@ -2664,6 +2812,12 @@ function switchTab(tabId, title) {
     renderBillsTable();
     billsTableDirty = false;
   }
+  if (tabId === "menu") {
+    loadMenu();
+  }
+  if (tabId === "categories") {
+    loadCategories();
+  }
   if (tabId === "audit") {
     loadAuditLogs(auditCurrentPage, auditPageSize);
   }
@@ -2672,9 +2826,6 @@ function switchTab(tabId, title) {
   }
   if (tabId === "feedbacks") {
     loadFeedbacks();
-  }
-  if (tabId === "archives") {
-    loadArchives();
   }
 }
 
@@ -2693,27 +2844,6 @@ function statusBadge(status, voidReason) {
   return '<span class="badge badge-pending">Pending</span>';
 }
 
-function hideBrokenThumb(img) {
-  const btn = img && img.closest(".photo-thumb-btn");
-  if (btn) {
-    const span = document.createElement("span");
-    span.style.cssText = "color:#94a3b8; font-size:0.78rem;";
-    span.textContent = "No photo";
-    btn.replaceWith(span);
-  }
-}
-
-function renderPhotoCell(b) {
-  if (!b.has_image) {
-    return `<span style="color:#94a3b8; font-size:0.78rem;">No photo</span>`;
-  }
-  const imgUrl = `/api/sessions/${encodeURIComponent(b.session_id)}/image?v=${encodeURIComponent(b.retake_count || 0)}`;
-  return `
-    <button class="photo-thumb-btn" type="button" title="Click to view full photo" aria-label="View plate photo for Bill #${esc(b.bill_number || "")}" onclick="viewPhoto('${imgUrl}')">
-      <img src="${imgUrl}" alt="Plate preview" loading="lazy" decoding="async" onerror="hideBrokenThumb(this)">
-    </button>`;
-}
-
 function formatDateTime(iso) {
   if (!iso) return "-";
   const d = new Date(iso);
@@ -2726,10 +2856,7 @@ function formatDateTime(iso) {
 
 function formatItemsSummary(items) {
   if (!items || !items.length) return "-";
-  return items.map(i => {
-    const pcs = i.piece_count ? ` (${i.piece_count} pcs)` : "";
-    return `${esc(i.name)} ×${esc(i.quantity)}${pcs}`;
-  }).join(", ");
+  return items.map(i => `${esc(i.name)} ×${esc(i.quantity)}`).join(", ");
 }
 
 async function loadBills(options = {}) {
@@ -2892,7 +3019,6 @@ function renderSalesSvgChart(series) {
   const showRev = Boolean(salesSeriesVisible.revenue);
   const showPaid = Boolean(salesSeriesVisible.paid);
   const showVoid = Boolean(salesSeriesVisible.void);
-  const showScans = Boolean(salesSeriesVisible.scans);
 
   if (!items.length) {
     svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#94a3b8" font-size="13" font-family="Plus Jakarta Sans, sans-serif">No sales activity in this period.</text>`;
@@ -2901,7 +3027,7 @@ function renderSalesSvgChart(series) {
     return;
   }
 
-  if (!showRev && !showPaid && !showVoid && !showScans) {
+  if (!showRev && !showPaid && !showVoid) {
     svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#94a3b8" font-size="13" font-family="Plus Jakarta Sans, sans-serif">All series hidden — click a legend button above to show.</text>`;
     svg.onmousemove = null;
     svg.onmouseleave = null;
@@ -2922,12 +3048,11 @@ function renderSalesSvgChart(series) {
   const maxCntRaw = Math.max(
     ...items.map(s => Math.max(
       showPaid ? Number(s.paid_count || 0) : 0,
-      showVoid ? Number(s.void_count || 0) : 0,
-      showScans ? Number(s.scan_count || 0) : 0
+      showVoid ? Number(s.void_count || 0) : 0
     )),
     0
   );
-  const hasCountAxis = showPaid || showVoid || showScans;
+  const hasCountAxis = showPaid || showVoid;
   const maxCnt = hasCountAxis ? niceIntMax(maxCntRaw, 5) : 5;
 
   const steps = 5;
@@ -2949,7 +3074,7 @@ function renderSalesSvgChart(series) {
     gridSvg += `<text transform="rotate(-90 14 ${padT + plotH / 2})" x="14" y="${padT + plotH / 2}" text-anchor="middle" fill="#64748b" font-size="11" font-weight="600" font-family="Plus Jakarta Sans, sans-serif">Revenue (RM)</text>`;
   }
   if (hasCountAxis) {
-    gridSvg += `<text transform="rotate(90 ${W - 12} ${padT + plotH / 2})" x="${W - 12}" y="${padT + plotH / 2}" text-anchor="middle" fill="#64748b" font-size="11" font-weight="600" font-family="Plus Jakarta Sans, sans-serif">Bills & Scans</text>`;
+    gridSvg += `<text transform="rotate(90 ${W - 12} ${padT + plotH / 2})" x="${W - 12}" y="${padT + plotH / 2}" text-anchor="middle" fill="#64748b" font-size="11" font-weight="600" font-family="Plus Jakarta Sans, sans-serif">Bills</text>`;
   }
 
   const n = items.length;
@@ -2961,7 +3086,6 @@ function renderSalesSvgChart(series) {
   let xLabelsSvg = "";
   const paidPts = [];
   const voidPts = [];
-  const scanPts = [];
   const cxList = [];
 
   items.forEach((s, idx) => {
@@ -2970,7 +3094,6 @@ function renderSalesSvgChart(series) {
     const rev = Number(s.revenue || 0);
     const paid = Number(s.paid_count || 0);
     const voidCnt = Number(s.void_count || 0);
-    const scans = Number(s.scan_count || 0);
 
     if (showRev) {
       const barH = maxRev > 0 ? Math.max(0, (rev / maxRev) * plotH) : 0;
@@ -2985,10 +3108,8 @@ function renderSalesSvgChart(series) {
 
     const py = baseY - (paid / maxCnt) * plotH;
     const vy = baseY - (voidCnt / maxCnt) * plotH;
-    const sy = baseY - (scans / maxCnt) * plotH;
     paidPts.push({ x: cx, y: py });
     voidPts.push({ x: cx, y: vy });
-    scanPts.push({ x: cx, y: sy });
 
     if (idx % labelStride === 0) {
       const xLbl = s.label.length > 7 && s.label.includes(" ") ? s.label.split(" ").slice(0, 2).join(" ") : s.label;
@@ -2998,15 +3119,8 @@ function renderSalesSvgChart(series) {
 
   const paidLinePts = paidPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const voidLinePts = voidPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const scanLinePts = scanPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 
   let linesSvg = "";
-  if (showScans) {
-    linesSvg += `<polyline fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${scanLinePts}"/>`;
-    scanPts.forEach(p => {
-      linesSvg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.2" fill="#3b82f6" stroke="#ffffff" stroke-width="1"/>`;
-    });
-  }
   if (showPaid) {
     linesSvg += `<polyline fill="none" stroke="#10b981" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${paidLinePts}"/>`;
     paidPts.forEach(p => {
@@ -3027,14 +3141,12 @@ function renderSalesSvgChart(series) {
     <g>${barsSvg}</g>
     <g>${linesSvg}</g>
     <g>${xLabelsSvg}</g>
-    <circle id="svgHoverScanDot" cx="0" cy="0" r="5" fill="#3b82f6" stroke="#ffffff" stroke-width="2" opacity="0" style="pointer-events:none;"/>
     <circle id="svgHoverPaidDot" cx="0" cy="0" r="5" fill="#10b981" stroke="#ffffff" stroke-width="2" opacity="0" style="pointer-events:none;"/>
     <circle id="svgHoverVoidDot" cx="0" cy="0" r="4.5" fill="#ef4444" stroke="#ffffff" stroke-width="2" opacity="0" style="pointer-events:none;"/>
     <rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="transparent" style="cursor:crosshair;"/>
   `;
 
   const band = document.getElementById("svgHoverBand");
-  const sDot = document.getElementById("svgHoverScanDot");
   const pDot = document.getElementById("svgHoverPaidDot");
   const vDot = document.getElementById("svgHoverVoidDot");
 
@@ -3043,13 +3155,6 @@ function renderSalesSvgChart(series) {
     if (!item) return;
     band.setAttribute("x", (padL + idx * slotW).toFixed(1));
     band.setAttribute("opacity", "1");
-    if (showScans) {
-      sDot.setAttribute("cx", scanPts[idx].x.toFixed(1));
-      sDot.setAttribute("cy", scanPts[idx].y.toFixed(1));
-      sDot.setAttribute("opacity", "1");
-    } else {
-      sDot.setAttribute("opacity", "0");
-    }
     if (showPaid) {
       pDot.setAttribute("cx", paidPts[idx].x.toFixed(1));
       pDot.setAttribute("cy", paidPts[idx].y.toFixed(1));
@@ -3087,13 +3192,6 @@ function renderSalesSvgChart(series) {
           <strong>${Number(item.void_count || 0)}</strong>
         </div>`;
     }
-    if (showScans) {
-      tipRows += `
-        <div class="chart-tooltip-row">
-          <span class="chart-tooltip-lbl"><span class="chart-tooltip-dot" style="background:#3b82f6;"></span>Scanned Images</span>
-          <strong>${Number(item.scan_count || 0)}</strong>
-        </div>`;
-    }
     tip.innerHTML = `<div class="chart-tooltip-title">${esc(item.label)}</div>${tipRows}`;
     tip.style.display = "block";
     const stageRect = stage.getBoundingClientRect();
@@ -3113,7 +3211,6 @@ function renderSalesSvgChart(series) {
     const svgX = (ev.clientX - rect.left) * scaleX;
     if (svgX < padL || svgX > padL + plotW) {
       band.setAttribute("opacity", "0");
-      sDot.setAttribute("opacity", "0");
       pDot.setAttribute("opacity", "0");
       vDot.setAttribute("opacity", "0");
       tip.style.display = "none";
@@ -3125,7 +3222,6 @@ function renderSalesSvgChart(series) {
 
   svg.onmouseleave = () => {
     band.setAttribute("opacity", "0");
-    sDot.setAttribute("opacity", "0");
     pDot.setAttribute("opacity", "0");
     vDot.setAttribute("opacity", "0");
     tip.style.display = "none";
@@ -3229,9 +3325,9 @@ function renderAnalytics(analytics) {
   syncPeriodSelectors(analytics);
   const pt = analytics.period_totals || {};
   document.getElementById("salesChartSubtitle").textContent =
-    `${analytics.period_label} — Paid revenue (RM) vs bills & scanned images`;
+    `${analytics.period_label} — Paid revenue (RM) vs paid & voided bills`;
   document.getElementById("periodRevenueBadge").textContent =
-    `Period Revenue: RM ${Number(pt.revenue || 0).toFixed(2)} · ${pt.scan_count || 0} Images Scanned`;
+    `Period Revenue: RM ${Number(pt.revenue || 0).toFixed(2)} · ${pt.paid_count || 0} Paid Bills`;
   document.getElementById("outcomeChartSub").textContent =
     `${pt.total_bills || 0} bills in ${analytics.period_label.toLowerCase()}`;
 
@@ -3388,7 +3484,7 @@ function exportOverviewPdf() {
   doc.text(`Period: ${an.period_label}   |   Generated: ${an.generated_at_local}`, 14, y);
   y += 9;
 
-  // Period Performance Summary Box (Replaces daily/weekly KPI grid)
+  // Period Performance Summary Box
   doc.setDrawColor(226, 232, 240);
   doc.setFillColor(248, 250, 252);
   doc.roundedRect(14, y, 182, 24, 2, 2, "FD");
@@ -3402,7 +3498,7 @@ function exportOverviewPdf() {
   doc.setFontSize(9);
   doc.setTextColor(51, 65, 85);
   doc.text(
-    `Paid Revenue: RM ${Number(pt.revenue || 0).toFixed(2)}   |   Paid: ${pt.paid_count || 0}   |   Voided: ${pt.void_count || 0}   |   Scanned: ${pt.scan_count || 0}`,
+    `Paid Revenue: RM ${Number(pt.revenue || 0).toFixed(2)}   |   Paid Bills: ${pt.paid_count || 0}   |   Voided Bills: ${pt.void_count || 0}   |   Total Bills: ${pt.total_bills || 0}`,
     18, y + 16.5
   );
   y += 32;
@@ -3416,12 +3512,11 @@ function exportOverviewPdf() {
   doc.setFontSize(8.5);
   doc.setTextColor(100, 116, 139);
   doc.text("Period", 14, y);
-  doc.text("Paid Rev (RM)", 68, y, { align: "right" });
-  doc.text("Paid", 96, y, { align: "right" });
-  doc.text("Pending", 122, y, { align: "right" });
-  doc.text("Void", 146, y, { align: "right" });
-  doc.text("Total", 170, y, { align: "right" });
-  doc.text("Scans", 194, y, { align: "right" });
+  doc.text("Paid Rev (RM)", 78, y, { align: "right" });
+  doc.text("Paid", 108, y, { align: "right" });
+  doc.text("Pending", 138, y, { align: "right" });
+  doc.text("Void", 166, y, { align: "right" });
+  doc.text("Total", 194, y, { align: "right" });
   y += 2.5;
   doc.line(14, y, 196, y);
   y += 5;
@@ -3431,12 +3526,11 @@ function exportOverviewPdf() {
   (an.series || []).forEach(row => {
     checkPage(6);
     doc.text(String(row.label), 14, y);
-    doc.text(Number(row.revenue || 0).toFixed(2), 68, y, { align: "right" });
-    doc.text(String(row.paid_count || 0), 96, y, { align: "right" });
-    doc.text(String(row.open_count || 0), 122, y, { align: "right" });
-    doc.text(String(row.void_count || 0), 146, y, { align: "right" });
-    doc.text(String(row.total_count || 0), 170, y, { align: "right" });
-    doc.text(String(row.scan_count || 0), 194, y, { align: "right" });
+    doc.text(Number(row.revenue || 0).toFixed(2), 78, y, { align: "right" });
+    doc.text(String(row.paid_count || 0), 108, y, { align: "right" });
+    doc.text(String(row.open_count || 0), 138, y, { align: "right" });
+    doc.text(String(row.void_count || 0), 166, y, { align: "right" });
+    doc.text(String(row.total_count || 0), 194, y, { align: "right" });
     y += 5.2;
   });
   y += 5;
@@ -3559,7 +3653,7 @@ function renderBillsTable() {
   const mobileList = document.getElementById("billsMobileList");
 
   if (!pageBills.length) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:2rem;">No matching bills found.</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:2rem;">No matching bills found.</td></tr>';
     if (mobileList) mobileList.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:2rem;">No matching bills found.</div>';
     return;
   }
@@ -3591,7 +3685,6 @@ function renderBillsTable() {
           <td>${contactsHtml}</td>
           <td style="font-weight:700;">RM ${totalAmt.toFixed(2)}</td>
           <td>${statusBadge(b.status, b.void_reason)}${refundedSub}</td>
-          <td>${renderPhotoCell(b)}</td>
           <td>
             <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
               <button class="btn btn-outline btn-sm" onclick="downloadBillPdf('${esc(b.session_id)}')">PDF</button>
@@ -3623,20 +3716,6 @@ function renderBillsTable() {
       const contactsHtml = (b.receipt_phone || b.receipt_email)
         ? `<div class="bmc-section"><span class="bmc-section-label">Customer Contact</span><div style="font-size:0.82rem; color:#1e293b;">${b.receipt_phone ? `<strong>${esc(b.receipt_phone)}</strong>` : ""}${b.receipt_phone && b.receipt_email ? " • " : ""}${b.receipt_email ? `<span>${esc(b.receipt_email)}</span>` : ""}</div></div>`
         : "";
-      const imgUrl = `/api/sessions/${encodeURIComponent(b.session_id)}/image?v=${encodeURIComponent(b.retake_count || 0)}`;
-      const viewImageBtn = b.has_image
-        ? `<button type="button" class="btn btn-outline btn-sm bmc-btn-full" onclick="viewPhoto('${imgUrl}')">
-            <svg style="width:14px; height:14px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
-            <span>View Image</span>
-          </button>`
-        : `<button type="button" class="btn btn-outline btn-sm bmc-btn-full" disabled style="opacity:0.45; cursor:not-allowed; color:#94a3b8; border-color:#e2e8f0;">
-            <svg style="width:14px; height:14px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
-            <span>No Image Available</span>
-          </button>`;
       return `
         <div class="bill-mobile-card">
           <div class="bmc-header">
@@ -3667,7 +3746,6 @@ function renderBillsTable() {
               ${refundBtn}
               ${markPaidBtn}
             </div>
-            ${viewImageBtn}
           </div>
         </div>
       `;
@@ -3719,10 +3797,6 @@ function renderRefundModalContent(info) {
   const badge = document.getElementById("refundBillNoBadge");
   const body = document.getElementById("refundModalBody");
   badge.textContent = `#${info.bill_number || "---"}`;
-
-  const photoHtml = info.has_image && info.image_url
-    ? `<img src="${info.image_url}" alt="Plate photo for Bill #${esc(info.bill_number)}" class="refund-photo-preview" onclick="viewPhoto('${info.image_url}')" title="Click to enlarge"><span style="font-size:0.72rem;color:#64748b;">Click photo to enlarge</span>`
-    : `<div style="color:#94a3b8;font-size:0.82rem;text-align:center;">No photo tied to this bill</div>`;
 
   const items = info.items || [];
   const hasRefundableItems = items.some(it => Number(it.remaining_qty || 0) > 0);
@@ -3780,7 +3854,7 @@ function renderRefundModalContent(info) {
 
   body.innerHTML = `
     <div id="refundErrorBox" class="refund-err-box"></div>
-    <div class="refund-top-grid">
+    <div class="refund-top-grid" style="grid-template-columns: 1fr;">
       <div class="refund-info-box">
         <div class="refund-info-row"><span class="refund-info-lbl">Bill #</span><span class="refund-info-val">#${esc(info.bill_number || "-")}</span></div>
         <div class="refund-info-row"><span class="refund-info-lbl">Customer Email</span><span class="refund-info-val">${esc(info.receipt_email || "-")}</span></div>
@@ -3788,7 +3862,6 @@ function renderRefundModalContent(info) {
         <div class="refund-info-row"><span class="refund-info-lbl">Payment Ref</span><span class="refund-info-val" style="font-size:0.78rem;">${paymentNote}</span></div>
         <div class="refund-info-row"><span class="refund-info-lbl">Bill Total</span><span class="refund-info-val">RM ${Number(info.total || 0).toFixed(2)}</span></div>
       </div>
-      <div class="refund-photo-box">${photoHtml}</div>
     </div>
 
     <div>
@@ -4116,8 +4189,7 @@ function generateBillPdfDoc(billData) {
 
   let y = curY + 11.5;
   items.forEach((item) => {
-    const pcs = item.piece_count ? ` (${item.piece_count} pcs)` : "";
-    const label = `${item.name} x${item.quantity}${pcs}`;
+    const label = `${item.name} x${item.quantity}`;
     const sub = Number(item.subtotal || 0).toFixed(2);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(15, 23, 42);
@@ -4186,13 +4258,13 @@ function downloadBillPdf(sessionId) {
   if (!billData) return;
   const doc = generateBillPdfDoc(billData);
   if (doc) {
-    doc.save(`AFRC-Receipt-${billData.bill_number || "AAA-0001"}.pdf`);
+    doc.save(`Receipt-${billData.bill_number || "AAA-0001"}.pdf`);
   }
 }
 
 async function viewBillPdfPreview(billIdentifier) {
   if (!billIdentifier) {
-    showToast("No bill reference associated with this scan.");
+    showToast("No bill reference associated with this record.");
     return;
   }
   try {
@@ -4231,9 +4303,362 @@ async function viewBillPdfPreview(billIdentifier) {
   }
 }
 
-/* Menu Management */
+/* ==================== CATEGORIES & MENU MANAGEMENT ==================== */
+let allAdminCategories = [];
+let currentMenuDishes = [];
+let newDishSelectedCategories = [];
+let newDishPhotoFile = null;
+let newCatSelectedIcon = "restaurant";
+let photoUploadTargetDishId = null;
+let draggedCatId = null;
+let draggedDishId = null;
+let _lastMenuMouseDownInteractive = false;
+
+document.addEventListener("mousedown", (e) => {
+  const t = e.target;
+  _lastMenuMouseDownInteractive = Boolean(
+    t && t.closest && t.closest("input, textarea, select, button:not(.menu-drag-handle)")
+  );
+}, true);
+
 function showError(message) {
-  document.getElementById("error").textContent = message || "";
+  const el = document.getElementById("error");
+  if (el) el.textContent = message || "";
+}
+
+function showCategoryError(message) {
+  const el = document.getElementById("categoryError");
+  if (el) el.textContent = message || "";
+}
+
+function getCategoryIcon(catName) {
+  const found = allAdminCategories.find(c => (c.name || "").toLowerCase() === String(catName || "").toLowerCase());
+  return (found && found.icon) ? found.icon : "restaurant";
+}
+
+function selectNewCatIcon(icon, btn) {
+  newCatSelectedIcon = icon || "restaurant";
+  document.querySelectorAll("#newCatIconPicker .icon-choice-btn").forEach(b => {
+    b.classList.toggle("active", b === btn || b.dataset.icon === newCatSelectedIcon);
+  });
+}
+
+async function loadCategories() {
+  try {
+    const res = await fetch("/api/categories?_t=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) return;
+    allAdminCategories = await res.json();
+    renderCategoriesDragList();
+    renderNewDishCategoriesPicker();
+  } catch (err) {
+    console.error("Failed to load categories:", err);
+  }
+}
+
+function renderNewDishCategoriesPicker() {
+  const host = document.getElementById("newDishCategoriesPicker");
+  if (!host) return;
+  const validNames = new Set(allAdminCategories.map(c => c.name));
+  newDishSelectedCategories = newDishSelectedCategories.filter(n => validNames.has(n));
+
+  if (!allAdminCategories.length) {
+    host.innerHTML = `<span style="font-size:0.78rem; color:#94a3b8;">No categories available yet. Add categories in the <a href="javascript:void(0)" onclick="switchTab('categories','Categories Management')" style="color:#ff5e36; font-weight:700;">Categories</a> tab.</span>`;
+    return;
+  }
+
+  host.innerHTML = allAdminCategories.map(cat => {
+    const isSel = newDishSelectedCategories.includes(cat.name);
+    const encName = esc(cat.name);
+    return `
+      <button type="button" class="cat-pick-pill ${isSel ? "selected" : ""}" data-cat-name="${encName}" onclick="toggleNewDishCategory(this.dataset.catName)">
+        <span class="material-symbols-outlined">${esc(cat.icon || "restaurant")}</span>
+        <span>${encName}</span>
+        ${isSel ? '<span class="cat-pick-check">✓</span>' : ""}
+      </button>
+    `;
+  }).join("");
+}
+
+function toggleNewDishCategory(catName) {
+  if (!catName) return;
+  const idx = newDishSelectedCategories.indexOf(catName);
+  if (idx >= 0) {
+    newDishSelectedCategories.splice(idx, 1);
+  } else {
+    if (newDishSelectedCategories.length >= 3) {
+      showToast("Each menu item can tag up to 3 categories.");
+      return;
+    }
+    newDishSelectedCategories.push(catName);
+  }
+  renderNewDishCategoriesPicker();
+}
+
+function renderCategoriesDragList() {
+  const host = document.getElementById("categoriesDragList");
+  if (!host) return;
+  if (!allAdminCategories.length) {
+    host.innerHTML = `<div class="empty-state-sm">No categories added yet. Create your first category above.</div>`;
+    return;
+  }
+  host.innerHTML = allAdminCategories.map((cat, idx) => `
+    <div class="cat-drag-item" draggable="true" data-cat-id="${cat.id}"
+         ondragstart="onCategoryDragStart(event, ${cat.id})"
+         ondragover="onCategoryDragOver(event)"
+         ondragleave="onCategoryDragLeave(event)"
+         ondrop="onCategoryDrop(event, ${cat.id})"
+         ondragend="onCategoryDragEnd(event)">
+      <span class="cat-drag-handle" title="Drag to reorder">⋮⋮</span>
+      <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:800; min-width:32px; text-align:center;">#${idx + 1}</span>
+      <div class="cat-icon-box">
+        <span class="material-symbols-outlined" style="font-size:20px;">${esc(cat.icon || "restaurant")}</span>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:700; color:#0f172a; font-size:0.94rem;">${esc(cat.name)}</div>
+        <div style="font-size:0.76rem; color:#64748b;">${cat.dish_count || 0} menu items tagged (${cat.available_count || 0} available today)</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline btn-sm" style="padding:0.3rem 0.5rem;" ${idx === 0 ? "disabled" : ""} onclick="moveCategoryOrder(${idx}, -1)" title="Move up">↑</button>
+        <button type="button" class="btn btn-outline btn-sm" style="padding:0.3rem 0.5rem;" ${idx === allAdminCategories.length - 1 ? "disabled" : ""} onclick="moveCategoryOrder(${idx}, 1)" title="Move down">↓</button>
+        <button type="button" class="btn btn-outline btn-sm" data-id="${cat.id}" data-name="${esc(cat.name)}" onclick="editCategoryPrompt(this.dataset.id, this.dataset.name)">Edit</button>
+        <button type="button" class="btn btn-danger btn-sm" data-id="${cat.id}" data-name="${esc(cat.name)}" onclick="deleteCategory(this.dataset.id, this.dataset.name)">Delete</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function editCategoryPrompt(catId, currentName) {
+  const nextName = prompt("Edit Category Name:", currentName || "");
+  if (nextName === null) return;
+  const trimmed = nextName.trim();
+  if (!trimmed || trimmed === currentName) return;
+  showCategoryError("");
+  try {
+    const res = await fetch(`/api/admin/categories/${encodeURIComponent(catId)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showCategoryError(data.detail || "Failed to update category.");
+      return;
+    }
+    showToast(`Category renamed to "${trimmed}"`);
+    await loadCategories();
+    await loadMenu();
+  } catch (err) {
+    showCategoryError("Network error updating category.");
+  }
+}
+
+function onCategoryDragStart(event, catId) {
+  draggedCatId = Number(catId);
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(catId));
+  }
+  const el = event.currentTarget;
+  if (el) setTimeout(() => el.classList.add("dragging"), 0);
+}
+
+function onCategoryDragOver(event) {
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  const el = event.currentTarget;
+  if (el && !el.classList.contains("dragging")) {
+    el.classList.add("drag-over");
+  }
+}
+
+function onCategoryDragLeave(event) {
+  const el = event.currentTarget;
+  if (el) el.classList.remove("drag-over");
+}
+
+async function onCategoryDrop(event, targetCatId) {
+  event.preventDefault();
+  const el = event.currentTarget;
+  if (el) el.classList.remove("drag-over");
+  const fromId = Number(draggedCatId || (event.dataTransfer && event.dataTransfer.getData("text/plain")));
+  const toId = Number(targetCatId);
+  if (!fromId || !toId || fromId === toId) return;
+
+  const fromIdx = allAdminCategories.findIndex(c => Number(c.id) === fromId);
+  const toIdx = allAdminCategories.findIndex(c => Number(c.id) === toId);
+  if (fromIdx < 0 || toIdx < 0) return;
+
+  const [moved] = allAdminCategories.splice(fromIdx, 1);
+  allAdminCategories.splice(toIdx, 0, moved);
+  renderCategoriesDragList();
+  renderNewDishCategoriesPicker();
+  await saveCategoriesOrder();
+}
+
+function onCategoryDragEnd(event) {
+  draggedCatId = null;
+  document.querySelectorAll(".cat-drag-item").forEach(item => {
+    item.classList.remove("dragging", "drag-over");
+  });
+}
+
+async function moveCategoryOrder(idx, delta) {
+  const nextIdx = idx + delta;
+  if (nextIdx < 0 || nextIdx >= allAdminCategories.length) return;
+  const [moved] = allAdminCategories.splice(idx, 1);
+  allAdminCategories.splice(nextIdx, 0, moved);
+  renderCategoriesDragList();
+  renderNewDishCategoriesPicker();
+  await saveCategoriesOrder();
+}
+
+async function saveCategoriesOrder() {
+  const badge = document.getElementById("catOrderSaveBadge");
+  if (badge) {
+    badge.style.color = "#f59e0b";
+    badge.textContent = "Saving order...";
+  }
+  try {
+    const res = await fetch("/api/admin/categories/reorder", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category_ids: allAdminCategories.map(c => c.id) }),
+    });
+    if (!res.ok) throw new Error("Failed to save category order");
+    const data = await res.json();
+    allAdminCategories = Array.isArray(data) ? data : (data.categories || allAdminCategories);
+    renderCategoriesDragList();
+    renderNewDishCategoriesPicker();
+    if (badge) {
+      badge.style.color = "#10b981";
+      badge.textContent = "Order synced ✓";
+    }
+    showToast("Category order updated");
+    await loadMenu();
+  } catch (err) {
+    console.error("Category reorder error:", err);
+    if (badge) {
+      badge.style.color = "#ef4444";
+      badge.textContent = "Failed to save order";
+    }
+    showToast("Failed to save category order");
+  }
+}
+
+async function handleAddCategory(event) {
+  event.preventDefault();
+  showCategoryError("");
+  const inp = document.getElementById("newCatNameInput");
+  const name = (inp ? inp.value : "").trim();
+  if (!name) {
+    showCategoryError("Category name is required.");
+    return;
+  }
+  const btn = document.getElementById("btnAddCategorySubmit");
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch("/api/admin/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, icon: newCatSelectedIcon || "restaurant" }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showCategoryError(data.detail || "Failed to add category.");
+      return;
+    }
+    if (inp) inp.value = "";
+    showToast(`Category "${data.name || name}" added`);
+    await loadCategories();
+    await loadMenu();
+  } catch (err) {
+    showCategoryError("Network error adding category.");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function deleteCategory(catId, catName) {
+  if (!confirm(`Delete category "${catName}"?\n\nIt will be untagged from all menu items.`)) return;
+  showCategoryError("");
+  try {
+    const res = await fetch(`/api/admin/categories/${encodeURIComponent(catId)}`, {
+      method: "DELETE",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showCategoryError(data.detail || "Failed to delete category.");
+      return;
+    }
+    showToast(`Category "${catName}" deleted`);
+    await loadCategories();
+    await loadMenu();
+  } catch (err) {
+    showCategoryError("Network error deleting category.");
+  }
+}
+
+function onNewDishPhotoSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  newDishPhotoFile = file;
+  const previewBox = document.getElementById("newPhotoPreviewBox");
+  if (previewBox) {
+    const url = URL.createObjectURL(file);
+    previewBox.outerHTML = `<img id="newPhotoPreviewBox" src="${url}" alt="New menu item preview" class="menu-photo-thumb">`;
+  }
+}
+
+function clearNewDishPhoto() {
+  newDishPhotoFile = null;
+  const fileInput = document.getElementById("newPhotoFileInput");
+  if (fileInput) fileInput.value = "";
+  const previewBox = document.getElementById("newPhotoPreviewBox");
+  if (previewBox) {
+    previewBox.outerHTML = `<div id="newPhotoPreviewBox" class="menu-photo-placeholder">No photo</div>`;
+  }
+}
+
+function triggerDishPhotoUpload(dishId) {
+  photoUploadTargetDishId = dishId;
+  const inp = document.getElementById("dishRowPhotoInput");
+  if (inp) {
+    inp.value = "";
+    inp.click();
+  }
+}
+
+async function handleDishRowPhotoSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  const dishId = photoUploadTargetDishId;
+  if (!file || !dishId) return;
+
+  setAutoSaveIndicator("saving");
+  showToast("Uploading menu photo...");
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`/api/menu/${encodeURIComponent(dishId)}/photo`, {
+      method: "POST",
+      body: fd,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showError(data.detail || "Photo upload failed");
+      setAutoSaveIndicator("error");
+      return;
+    }
+    setAutoSaveIndicator("saved");
+    showToast("Menu photo updated!");
+    await loadMenu();
+  } catch (err) {
+    console.error("Photo upload error:", err);
+    showError("Network error uploading photo");
+    setAutoSaveIndicator("error");
+  } finally {
+    event.target.value = "";
+    photoUploadTargetDishId = null;
+  }
 }
 
 function toggleAddDishForm() {
@@ -4259,46 +4684,265 @@ function onMobileSwitchToggle(dishId, checkbox) {
   flushAutoSaveDish(dishId);
 }
 
-async function loadMenu() {
-  const res = await fetch("/api/menu");
-  const menu = await res.json();
+function renderDishCategoriesPills(d) {
+  const selected = Array.isArray(d.categories) ? d.categories : [];
+  const catNames = allAdminCategories.map(c => c.name);
+  selected.forEach(s => {
+    if (!catNames.includes(s)) catNames.push(s);
+  });
+  if (!catNames.length) {
+    return `<span style="font-size:0.75rem; color:#94a3b8;">No categories defined</span>`;
+  }
+  return `
+    <div>
+      <div class="cat-picker-meta">
+        <span data-dish-cat-count="${d.id}">${selected.length}/3 tagged</span>
+        <span style="color:#94a3b8; font-weight:500;">· Click pill to edit</span>
+      </div>
+      <div class="cat-picker-wrap" data-dish-cat-wrap="${d.id}">
+        ${catNames.map(cName => {
+          const isSel = selected.includes(cName);
+          const enc = esc(cName);
+          const icon = esc(getCategoryIcon(cName));
+          return `<button type="button" class="cat-pick-pill ${isSel ? "selected" : ""}" data-dish-id="${d.id}" data-cat-name="${enc}" onclick="toggleDishCategoryTag(${d.id}, this.dataset.catName)">
+            <span class="material-symbols-outlined">${icon}</span>
+            <span>${enc}</span>
+            ${isSel ? '<span class="cat-pick-check">✓</span>' : ""}
+          </button>`;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderDishPhotoControl(d) {
+  const thumb = (d.has_image && d.image_url)
+    ? `<img src="${esc(d.image_url)}" alt="${esc(d.name)}" class="menu-photo-thumb" onclick="viewPhoto('${esc(d.image_url)}')" title="Click to enlarge" loading="lazy">`
+    : `<div class="menu-photo-placeholder">No photo</div>`;
+  return `
+    <div class="menu-photo-cell">
+      ${thumb}
+      <div class="menu-photo-actions">
+        <button type="button" class="btn btn-outline btn-sm" style="padding:0.25rem 0.55rem; font-size:0.72rem;" onclick="triggerDishPhotoUpload(${d.id})">${d.has_image ? "Change" : "Upload"}</button>
+      </div>
+    </div>
+  `;
+}
+
+function getDishSelectedCategories(dishId) {
+  const dishObj = currentMenuDishes.find(x => Number(x.id) === Number(dishId));
+  if (dishObj && Array.isArray(dishObj.categories)) {
+    return dishObj.categories.slice(0, 3);
+  }
+  const row = document.querySelector(`tr[data-dish-id="${dishId}"]`);
+  const card = document.querySelector(`.menu-mobile-card[data-dish-id="${dishId}"]`);
+  const host = row || card;
+  if (!host) return [];
+  return [...host.querySelectorAll(".cat-pick-pill.selected")].map(b => b.dataset.catName).filter(Boolean).slice(0, 3);
+}
+
+function toggleDishCategoryTag(dishId, catName) {
+  if (!catName) return;
+  let dishObj = currentMenuDishes.find(x => Number(x.id) === Number(dishId));
+  if (!dishObj) {
+    dishObj = { id: Number(dishId), categories: getDishSelectedCategories(dishId) };
+    currentMenuDishes.push(dishObj);
+  }
+  if (!Array.isArray(dishObj.categories)) dishObj.categories = [];
+
+  const idx = dishObj.categories.indexOf(catName);
+  if (idx >= 0) {
+    dishObj.categories.splice(idx, 1);
+  } else {
+    if (dishObj.categories.length >= 3) {
+      showToast("Each menu item can tag up to 3 categories.");
+      return;
+    }
+    dishObj.categories.push(catName);
+  }
+
+  document.querySelectorAll(`[data-dish-cat-count="${dishId}"]`).forEach(el => {
+    el.textContent = `${dishObj.categories.length}/3 tagged`;
+  });
+
+  document.querySelectorAll(`[data-dish-cat-wrap="${dishId}"] .cat-pick-pill`).forEach(btn => {
+    const cName = btn.dataset.catName;
+    const isSel = dishObj.categories.includes(cName);
+    const icon = esc(getCategoryIcon(cName));
+    btn.classList.toggle("selected", isSel);
+    btn.innerHTML = `<span class="material-symbols-outlined">${icon}</span><span>${esc(cName)}</span>${isSel ? '<span class="cat-pick-check">✓</span>' : ""}`;
+  });
+
+  flushAutoSaveDish(dishId);
+}
+
+/* Menu Drag & Drop Position Reordering */
+function onDishDragStart(event, dishId) {
+  if (_lastMenuMouseDownInteractive) {
+    event.preventDefault();
+    return;
+  }
+  draggedDishId = Number(dishId);
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(dishId));
+  }
+  const el = event.currentTarget;
+  if (el) setTimeout(() => el.classList.add("dragging"), 0);
+}
+
+function onDishDragOver(event) {
+  if (!draggedDishId) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  const el = event.currentTarget;
+  if (el && !el.classList.contains("dragging")) {
+    el.classList.add("drag-over");
+  }
+}
+
+function onDishDragLeave(event) {
+  const el = event.currentTarget;
+  if (el) el.classList.remove("drag-over");
+}
+
+async function onDishDrop(event, targetDishId) {
+  event.preventDefault();
+  const el = event.currentTarget;
+  if (el) el.classList.remove("drag-over");
+  const fromId = Number(draggedDishId || (event.dataTransfer && event.dataTransfer.getData("text/plain")));
+  const toId = Number(targetDishId);
+  if (!fromId || !toId || fromId === toId) return;
+
+  const fromIdx = currentMenuDishes.findIndex(d => Number(d.id) === fromId);
+  const toIdx = currentMenuDishes.findIndex(d => Number(d.id) === toId);
+  if (fromIdx < 0 || toIdx < 0) return;
+
+  const [moved] = currentMenuDishes.splice(fromIdx, 1);
+  currentMenuDishes.splice(toIdx, 0, moved);
+  renderMenuTableAndCards();
+  await saveMenuOrder();
+}
+
+function onDishDragEnd(event) {
+  draggedDishId = null;
+  document.querySelectorAll(".menu-drag-row, .menu-mobile-card").forEach(item => {
+    item.classList.remove("dragging", "drag-over");
+  });
+}
+
+async function moveDishOrder(idx, delta) {
+  const nextIdx = idx + delta;
+  if (nextIdx < 0 || nextIdx >= currentMenuDishes.length) return;
+  const [moved] = currentMenuDishes.splice(idx, 1);
+  currentMenuDishes.splice(nextIdx, 0, moved);
+  renderMenuTableAndCards();
+  await saveMenuOrder();
+}
+
+async function saveMenuOrder() {
+  setAutoSaveIndicator("saving");
+  try {
+    const res = await fetch("/api/admin/menu/reorder", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dish_ids: currentMenuDishes.map(d => d.id) }),
+    });
+    if (!res.ok) throw new Error("Failed to save menu order");
+    const data = await res.json();
+    if (Array.isArray(data.dishes)) {
+      currentMenuDishes = data.dishes;
+    }
+    renderMenuTableAndCards();
+    setAutoSaveIndicator("saved");
+    showToast("Menu position order saved");
+  } catch (err) {
+    console.error("Menu reorder error:", err);
+    setAutoSaveIndicator("error");
+    showToast("Failed to save menu position order");
+  }
+}
+
+function renderMenuTableAndCards() {
   const tbody = document.getElementById("menuBody");
   const mobileList = document.getElementById("menuMobileList");
+  const totalDishes = currentMenuDishes.length;
 
   if (tbody) {
-    tbody.innerHTML = menu.map(d => `
-      <tr data-dish-id="${d.id}">
-        <td style="font-weight:700;">
-          <div>${esc(d.name)}</div>
-          <div style="font-size:0.7rem; color:#64748b; font-weight:400;">AI Vision Name</div>
+    tbody.innerHTML = currentMenuDishes.map((d, idx) => `
+      <tr data-dish-id="${d.id}" class="menu-drag-row" draggable="true"
+          ondragstart="onDishDragStart(event, ${d.id})"
+          ondragover="onDishDragOver(event)"
+          ondragleave="onDishDragLeave(event)"
+          ondrop="onDishDrop(event, ${d.id})"
+          ondragend="onDishDragEnd(event)">
+        <td style="width:96px;">
+          <div class="menu-order-box">
+            <span class="menu-drag-handle" title="Drag row to reorder">⋮⋮</span>
+            <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:800; min-width:30px; text-align:center; font-size:0.74rem;">#${idx + 1}</span>
+            <div class="menu-order-arrows">
+              <button type="button" class="menu-arrow-btn" ${idx === 0 ? "disabled" : ""} onclick="moveDishOrder(${idx}, -1)" title="Move up">▲</button>
+              <button type="button" class="menu-arrow-btn" ${idx === totalDishes - 1 ? "disabled" : ""} onclick="moveDishOrder(${idx}, 1)" title="Move down">▼</button>
+            </div>
+          </div>
         </td>
-        <td style="min-width:160px;">
-          <input type="text" class="input-box alias" placeholder="Same as AI name" value="${esc(d.alias || "")}" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})" title="Customer-facing alias name">
+        <td style="width:130px;">${renderDishPhotoControl(d)}</td>
+        <td style="min-width:170px;">
+          <input type="text" class="input-box dish-name-inp" value="${esc(d.name)}" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})" style="font-weight:700; color:#0f172a;">
         </td>
-        <td><textarea class="input-box desc" maxlength="500" rows="2" placeholder="What one serving looks like" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">${esc(d.description || "")}</textarea></td>
-        <td style="width:110px;"><input type="number" min="1" max="100" step="1" class="input-box pieces" required value="${d.pieces_per_portion || 1}" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})"></td>
-        <td style="width:190px;"><div class="price-stepper-wrap"><button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, -1)" aria-label="Decrease price by 1">−</button><div class="input-with-prefix"><span class="currency-prefix">RM</span><input type="number" step="1" min="0" value="${Math.round(d.price) == d.price ? Number(d.price).toFixed(0) : Number(d.price).toFixed(2)}" data-id="${d.id}" class="input-box prefix-input price" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})"></div><button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, 1)" aria-label="Increase price by 1">+</button></div></td>
-        <td style="width:100px; text-align:center;"><input type="checkbox" style="width:18px; height:18px;" ${d.available ? "checked" : ""} data-id="${d.id}" class="avail" onchange="flushAutoSaveDish(${d.id})"></td>
-        <td style="width:80px;"><button type="button" class="btn btn-danger btn-sm" data-id="${d.id}" data-name="${esc(d.name)}" onclick="removeDish(this)">Remove</button></td>
+        <td style="min-width:240px;">
+          ${renderDishCategoriesPills(d)}
+        </td>
+        <td style="min-width:200px;">
+          <textarea class="input-box desc" maxlength="500" rows="2" placeholder="Optional description" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">${esc(d.description || "")}</textarea>
+        </td>
+        <td style="width:190px;">
+          <div class="price-stepper-wrap">
+            <button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, -1)" aria-label="Decrease price by 1">−</button>
+            <div class="input-with-prefix">
+              <span class="currency-prefix">RM</span>
+              <input type="number" step="0.01" min="0" value="${Number(d.price).toFixed(2)}" data-id="${d.id}" class="input-box prefix-input price" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">
+            </div>
+            <button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, 1)" aria-label="Increase price by 1">+</button>
+          </div>
+        </td>
+        <td style="width:100px; text-align:center;">
+          <input type="checkbox" style="width:18px; height:18px;" ${d.available ? "checked" : ""} data-id="${d.id}" class="avail" onchange="flushAutoSaveDish(${d.id})">
+        </td>
+        <td style="width:80px;">
+          <button type="button" class="btn btn-danger btn-sm" data-id="${d.id}" data-name="${esc(d.name)}" onclick="removeDish(this)">Remove</button>
+        </td>
       </tr>
     `).join("");
     const noRow = document.createElement("tr");
     noRow.id = "menuNoMatchRow";
     noRow.style.display = "none";
-    noRow.innerHTML = '<td colspan="7" style="text-align:center; padding:2.5rem 1rem; color:#94a3b8; font-style:italic;">No dishes match your search query.</td>';
+    noRow.innerHTML = '<td colspan="8" style="text-align:center; padding:2.5rem 1rem; color:#94a3b8; font-style:italic;">No menu items match your search query.</td>';
     tbody.appendChild(noRow);
   }
 
   if (mobileList) {
-    if (!menu.length) {
+    if (!currentMenuDishes.length) {
       mobileList.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:2rem;">No menu items added yet.</div>';
     } else {
-      mobileList.innerHTML = menu.map(d => `
-        <div class="menu-mobile-card" data-dish-id="${d.id}">
+      mobileList.innerHTML = currentMenuDishes.map((d, idx) => `
+        <div class="menu-mobile-card" data-dish-id="${d.id}" draggable="true"
+             ondragstart="onDishDragStart(event, ${d.id})"
+             ondragover="onDishDragOver(event)"
+             ondragleave="onDishDragLeave(event)"
+             ondrop="onDishDrop(event, ${d.id})"
+             ondragend="onDishDragEnd(event)">
           <div class="mmc-head">
-            <div>
-              <div class="mmc-name">${esc(d.name)}</div>
-              <div style="font-size:0.7rem; color:#64748b;">AI Vision Name</div>
+            <div style="display:flex; align-items:center; gap:0.65rem;">
+              <div class="menu-order-box">
+                <span class="menu-drag-handle" title="Drag card to reorder">⋮⋮</span>
+                <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:800; min-width:28px; text-align:center; font-size:0.72rem;">#${idx + 1}</span>
+                <div class="menu-order-arrows">
+                  <button type="button" class="menu-arrow-btn" ${idx === 0 ? "disabled" : ""} onclick="moveDishOrder(${idx}, -1)" title="Move up">▲</button>
+                  <button type="button" class="menu-arrow-btn" ${idx === totalDishes - 1 ? "disabled" : ""} onclick="moveDishOrder(${idx}, 1)" title="Move down">▼</button>
+                </div>
+              </div>
+              ${renderDishPhotoControl(d)}
             </div>
             <label class="switch-wrap" title="Toggle availability">
               <span class="switch-label ${d.available ? 'active' : ''}">${d.available ? 'Available' : 'Unavailable'}</span>
@@ -4309,34 +4953,32 @@ async function loadMenu() {
             </label>
           </div>
           <label class="card-input-label" style="margin-top:0.35rem;">
-            <span>Customer Alias (Human Friendly Name)</span>
-            <input type="text" class="input-box alias" placeholder="Same as AI name" value="${esc(d.alias || "")}" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">
+            <span>Menu Name</span>
+            <input type="text" class="input-box dish-name-inp" value="${esc(d.name)}" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})" style="font-weight:700; color:#0f172a;">
           </label>
-          <div class="mmc-grid">
-            <label class="card-input-label">
-              <span>Price</span>
-              <div class="price-stepper-wrap">
-                <button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, -1)" aria-label="Decrease price by 1">−</button>
-                <div class="input-with-prefix">
-                  <span class="currency-prefix">RM</span>
-                  <input type="number" step="1" min="0" value="${Math.round(d.price) == d.price ? Number(d.price).toFixed(0) : Number(d.price).toFixed(2)}" data-id="${d.id}" class="input-box prefix-input price" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">
-                </div>
-                <button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, 1)" aria-label="Increase price by 1">+</button>
-              </div>
-            </label>
-            <label class="card-input-label">
-              <span>Pieces / Portion</span>
-              <input type="number" min="1" max="100" step="1" value="${d.pieces_per_portion || 1}" data-id="${d.id}" class="input-box pieces" required oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">
-            </label>
+          <div class="card-input-label" style="margin-top:0.35rem;">
+            <span>Categories (Up to 3)</span>
+            ${renderDishCategoriesPills(d)}
           </div>
           <label class="card-input-label" style="margin-top:0.35rem;">
-            <span>Description for AI Vision</span>
-            <textarea class="input-box desc" maxlength="500" rows="2" placeholder="What one serving looks like..." data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">${esc(d.description || "")}</textarea>
+            <span>Price</span>
+            <div class="price-stepper-wrap">
+              <button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, -1)" aria-label="Decrease price by 1">−</button>
+              <div class="input-with-prefix">
+                <span class="currency-prefix">RM</span>
+                <input type="number" step="0.01" min="0" value="${Number(d.price).toFixed(2)}" data-id="${d.id}" class="input-box prefix-input price" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">
+              </div>
+              <button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, 1)" aria-label="Increase price by 1">+</button>
+            </div>
+          </label>
+          <label class="card-input-label" style="margin-top:0.35rem;">
+            <span>Description (Optional)</span>
+            <textarea class="input-box desc" maxlength="500" rows="2" placeholder="Optional description..." data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">${esc(d.description || "")}</textarea>
           </label>
           <div class="mmc-foot">
             <button type="button" class="btn btn-outline btn-sm" style="color:#dc2626; border-color:#fecaca;" data-id="${d.id}" data-name="${esc(d.name)}" onclick="removeDish(this)">
               <svg style="width:13px; height:13px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-              <span>Delete Dish</span>
+              <span>Delete Menu Item</span>
             </button>
           </div>
         </div>
@@ -4348,11 +4990,21 @@ async function loadMenu() {
       noMobile.style.textAlign = "center";
       noMobile.style.color = "#94a3b8";
       noMobile.style.fontStyle = "italic";
-      noMobile.textContent = "No dishes match your search query.";
+      noMobile.textContent = "No menu items match your search query.";
       mobileList.appendChild(noMobile);
     }
   }
   filterMenuItems();
+}
+
+async function loadMenu() {
+  if (!allAdminCategories.length) {
+    await loadCategories();
+  }
+  const res = await fetch("/api/menu?_t=" + Date.now(), { cache: "no-store" });
+  const menu = await res.json();
+  currentMenuDishes = Array.isArray(menu) ? menu : [];
+  renderMenuTableAndCards();
 }
 
 function filterMenuItems() {
@@ -4363,30 +5015,32 @@ function filterMenuItems() {
 
   const rows = document.querySelectorAll("#menuBody tr[data-dish-id]");
   const cards = document.querySelectorAll("#menuMobileList .menu-mobile-card[data-dish-id]");
-  
+
   let totalCount = rows.length;
   let matchCount = 0;
 
   rows.forEach(row => {
-    const dishName = (row.querySelector("td:first-child div:first-child")?.textContent || "").toLowerCase();
-    const aliasInp = row.querySelector(".alias");
+    const dishId = row.dataset.dishId;
+    const nameInp = row.querySelector(".dish-name-inp");
+    const dishName = (nameInp ? nameInp.value : "").toLowerCase();
     const descInp = row.querySelector(".desc");
-    const aliasVal = (aliasInp ? aliasInp.value : "").toLowerCase();
     const descVal = (descInp ? descInp.value : "").toLowerCase();
-    
-    const isMatch = !query || dishName.includes(query) || aliasVal.includes(query) || descVal.includes(query);
+    const catVal = getDishSelectedCategories(dishId).join(" ").toLowerCase();
+
+    const isMatch = !query || dishName.includes(query) || descVal.includes(query) || catVal.includes(query);
     row.style.display = isMatch ? "" : "none";
     if (isMatch) matchCount++;
   });
 
   cards.forEach(card => {
-    const dishName = (card.querySelector(".mmc-name")?.textContent || "").toLowerCase();
-    const aliasInp = card.querySelector(".alias");
+    const dishId = card.dataset.dishId;
+    const nameInp = card.querySelector(".dish-name-inp");
+    const dishName = (nameInp ? nameInp.value : "").toLowerCase();
     const descInp = card.querySelector(".desc");
-    const aliasVal = (aliasInp ? aliasInp.value : "").toLowerCase();
     const descVal = (descInp ? descInp.value : "").toLowerCase();
-    
-    const isMatch = !query || dishName.includes(query) || aliasVal.includes(query) || descVal.includes(query);
+    const catVal = getDishSelectedCategories(dishId).join(" ").toLowerCase();
+
+    const isMatch = !query || dishName.includes(query) || descVal.includes(query) || catVal.includes(query);
     card.style.display = isMatch ? "" : "none";
   });
 
@@ -4402,9 +5056,9 @@ function filterMenuItems() {
   const countEl = document.getElementById("menuItemsCount");
   if (countEl) {
     if (!query) {
-      countEl.textContent = `${totalCount} ${totalCount === 1 ? "dish" : "dishes"}`;
+      countEl.textContent = `${totalCount} ${totalCount === 1 ? "item" : "items"}`;
     } else {
-      countEl.textContent = `Found ${matchCount} of ${totalCount} ${totalCount === 1 ? "dish" : "dishes"}`;
+      countEl.textContent = `Found ${matchCount} of ${totalCount} ${totalCount === 1 ? "item" : "items"}`;
     }
   }
 }
@@ -4447,18 +5101,18 @@ function setAutoSaveIndicator(state) {
 function stepPriceInput(inputId, delta) {
   const el = typeof inputId === "string" ? document.getElementById(inputId) : inputId;
   if (!el) return;
-  let cur = Math.round(parseFloat(el.value) || 0);
-  let next = Math.max(0, cur + delta);
-  el.value = next;
+  let cur = parseFloat(el.value) || 0;
+  let next = Math.max(0.10, Math.round((cur + delta) * 100) / 100);
+  el.value = next.toFixed(2);
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 function stepDishPrice(dishId, delta) {
   const inputs = document.querySelectorAll(`.input-box.price[data-id="${dishId}"]`);
   inputs.forEach(inp => {
-    let cur = Math.round(parseFloat(inp.value) || 0);
-    let next = Math.max(0, cur + delta);
-    inp.value = next;
+    let cur = parseFloat(inp.value) || 0;
+    let next = Math.max(0.10, Math.round((cur + delta) * 100) / 100);
+    inp.value = next.toFixed(2);
   });
   flushAutoSaveDish(dishId);
 }
@@ -4487,19 +5141,17 @@ async function saveDishById(dishId) {
   const container = (window.innerWidth <= 767 && card) ? card : (row || card);
   if (!container) return;
 
-  const aliasInput = container.querySelector(".alias");
+  const nameInput = container.querySelector(".dish-name-inp");
   const priceInput = container.querySelector(".price");
   const descInput = container.querySelector(".desc");
-  const piecesInput = container.querySelector(".pieces");
   const availInput = container.querySelector(".avail");
 
   // Sync to other container if present
   const other = container === card ? row : card;
   if (other) {
-    const a = other.querySelector(".alias"); if (a && aliasInput) a.value = aliasInput.value;
+    const n = other.querySelector(".dish-name-inp"); if (n && nameInput) n.value = nameInput.value;
     const p = other.querySelector(".price"); if (p && priceInput) p.value = priceInput.value;
     const d = other.querySelector(".desc"); if (d && descInput) d.value = descInput.value;
-    const pc = other.querySelector(".pieces"); if (pc && piecesInput) pc.value = piecesInput.value;
     const av = other.querySelector(".avail"); if (av && availInput) av.checked = availInput.checked;
     if (other === card && availInput) {
       const lbl = card.querySelector(".switch-label");
@@ -4508,6 +5160,13 @@ async function saveDishById(dishId) {
         lbl.classList.toggle("active", availInput.checked);
       }
     }
+  }
+
+  const nameVal = (nameInput ? nameInput.value : "").trim();
+  if (!nameVal) {
+    showError("Menu item name cannot be empty.");
+    setAutoSaveIndicator("error");
+    return;
   }
 
   let priceRaw = (priceInput ? priceInput.value : "").trim().replace(',', '.');
@@ -4524,12 +5183,20 @@ async function saveDishById(dishId) {
     return;
   }
 
+  const dishObj = currentMenuDishes.find(x => Number(x.id) === Number(dishId));
+  if (dishObj) {
+    dishObj.name = nameVal;
+    dishObj.price = parseFloat(priceVal.toFixed(2));
+    dishObj.description = descInput ? descInput.value : "";
+    dishObj.available = availInput ? availInput.checked : true;
+  }
+
   const dishPayload = [{
     id: parseInt(dishId),
-    alias: aliasInput ? aliasInput.value.trim() : "",
+    name: nameVal,
     price: parseFloat(priceVal.toFixed(2)),
     description: descInput ? descInput.value : "",
-    pieces_per_portion: piecesInput ? piecesInput.value : "1",
+    categories: getDishSelectedCategories(dishId),
     available: availInput ? availInput.checked : true
   }];
 
@@ -4545,7 +5212,9 @@ async function saveDishById(dishId) {
       showError(errData.detail || "Save failed");
       throw new Error("Save failed");
     }
+    showError("");
     setAutoSaveIndicator("saved");
+    loadCategories();
   } catch (err) {
     console.error("Auto-save error:", err);
     setAutoSaveIndicator("error");
@@ -4556,12 +5225,15 @@ async function addDish(event) {
   event.preventDefault();
   showError("");
   const name = document.getElementById("newName").value.trim();
-  const alias = (document.getElementById("newAlias")?.value || "").trim();
   const priceInput = document.getElementById("newPrice");
   let priceRaw = (priceInput?.value || "").trim().replace(',', '.');
   if (priceRaw.startsWith('.')) priceRaw = '0' + priceRaw;
   const priceVal = parseFloat(priceRaw);
 
+  if (!name) {
+    showError("Menu item name is required.");
+    return;
+  }
   if (isNaN(priceVal) || priceVal < 0.10) {
     showError("Price must be at least RM 0.10.");
     if (priceInput) priceInput.focus();
@@ -4573,37 +5245,55 @@ async function addDish(event) {
     return;
   }
 
-  const body = {
-    name,
-    alias,
-    price: priceVal.toFixed(2),
-    description: document.getElementById("newDescription").value,
-    pieces_per_portion: document.getElementById("newPieces").value,
-    available: true
-  };
-  const res = await fetch("/api/menu/item", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(body)
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    showError(data.detail || "Could not add the dish.");
-    return;
+  const btn = document.getElementById("btnAddDishSubmit");
+  if (btn) btn.disabled = true;
+
+  try {
+    const body = {
+      name,
+      price: priceVal.toFixed(2),
+      description: document.getElementById("newDescription").value.trim(),
+      categories: newDishSelectedCategories.slice(0, 3),
+      available: true
+    };
+    const res = await fetch("/api/menu/item", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showError(data.detail || "Could not add the menu item.");
+      return;
+    }
+
+    if (newDishPhotoFile && data.id) {
+      const fd = new FormData();
+      fd.append("file", newDishPhotoFile);
+      await fetch(`/api/menu/${encodeURIComponent(data.id)}/photo`, {
+        method: "POST",
+        body: fd,
+      });
+    }
+
+    document.getElementById("newName").value = "";
+    document.getElementById("newPrice").value = "5.00";
+    document.getElementById("newDescription").value = "";
+    newDishSelectedCategories = [];
+    clearNewDishPhoto();
+    renderNewDishCategoriesPicker();
+    showToast("Menu item added");
+    const panel = document.getElementById("addDishPanel");
+    if (panel && window.innerWidth <= 767) {
+      panel.classList.remove("open");
+      const badge = document.getElementById("addDishToggleBadge");
+      if (badge) badge.textContent = "Tap to open";
+    }
+    await loadCategories();
+    await loadMenu();
+  } finally {
+    if (btn) btn.disabled = false;
   }
-  document.getElementById("newName").value = "";
-  if (document.getElementById("newAlias")) document.getElementById("newAlias").value = "";
-  document.getElementById("newPrice").value = "1";
-  document.getElementById("newDescription").value = "";
-  document.getElementById("newPieces").value = "1";
-  showToast("Dish added to menu");
-  const panel = document.getElementById("addDishPanel");
-  if (panel && window.innerWidth <= 767) {
-    panel.classList.remove("open");
-    const badge = document.getElementById("addDishToggleBadge");
-    if (badge) badge.textContent = "Tap to open";
-  }
-  await loadMenu();
 }
 
 async function removeDish(button) {
@@ -4614,44 +5304,51 @@ async function removeDish(button) {
   const res = await fetch(`/api/menu/${id}`, { method: "DELETE" });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    showError(data.detail || "Could not remove the dish.");
+    showError(data.detail || "Could not remove the menu item.");
     return;
   }
-  showToast("Dish removed");
+  showToast("Menu item removed");
+  await loadCategories();
   await loadMenu();
 }
 
 async function saveMenu() {
   showError("");
   const isMobile = window.innerWidth <= 767;
-  const cards = [...document.querySelectorAll("#menuMobileList .menu-mobile-card")];
-  const rows = [...document.querySelectorAll("#menuBody tr")];
+  const cards = [...document.querySelectorAll("#menuMobileList .menu-mobile-card[data-dish-id]")];
+  const rows = [...document.querySelectorAll("#menuBody tr[data-dish-id]")];
   const items = (isMobile && cards.length) ? cards : rows;
 
   for (const r of items) {
+    const nameEl = r.querySelector(".dish-name-inp");
+    if (nameEl && !nameEl.value.trim()) {
+      showError("Menu item name cannot be empty.");
+      return;
+    }
     const priceEl = r.querySelector(".price");
     const pRaw = (priceEl ? priceEl.value : "").trim();
     const pVal = parseFloat(pRaw);
     if (isNaN(pVal) || pVal < 0.10) {
-      showError("Each dish price must be at least RM 0.10.");
+      showError("Each menu item price must be at least RM 0.10.");
       return;
     }
     if (!/^\d+(\.\d{1,2})?$/.test(pRaw)) {
-      showError("Dish price can have at most 2 decimal places (e.g. 1.50).");
+      showError("Menu item price can have at most 2 decimal places (e.g. 1.50).");
       return;
     }
   }
 
   const dishes = items.map(r => {
     const priceEl = r.querySelector(".price");
+    const nameEl = r.querySelector(".dish-name-inp");
     const id = r.dataset.dishId || (priceEl ? priceEl.dataset.id : 0);
     const pVal = parseFloat(priceEl ? priceEl.value : 0) || 0;
     return {
       id: parseInt(id),
-      alias: r.querySelector(".alias") ? r.querySelector(".alias").value.trim() : "",
+      name: nameEl ? nameEl.value.trim() : undefined,
       price: parseFloat(pVal.toFixed(2)),
       description: r.querySelector(".desc") ? r.querySelector(".desc").value : "",
-      pieces_per_portion: r.querySelector(".pieces") ? r.querySelector(".pieces").value : "1",
+      categories: getDishSelectedCategories(id),
       available: r.querySelector(".avail") ? r.querySelector(".avail").checked : true
     };
   });
@@ -4662,12 +5359,14 @@ async function saveMenu() {
     body: JSON.stringify(dishes)
   });
   if (!res.ok) {
-    showError("Could not save menu changes.");
+    const errData = await res.json().catch(() => ({}));
+    showError(errData.detail || "Could not save menu changes.");
     setAutoSaveIndicator("error");
     return;
   }
   setAutoSaveIndicator("saved");
   showToast("Menu changes saved!");
+  await loadCategories();
 }
 
 function exportMenuCsv() {
@@ -4677,7 +5376,7 @@ function exportMenuCsv() {
 function triggerImportMenuCsv() {
   const proceed = confirm(
     "⚠️ WARNING: OVERWRITE MENU\n\n" +
-    "Importing a CSV will COMPLETELY OVERWRITE and replace all current dishes in the menu.\n\n" +
+    "Importing a CSV will COMPLETELY OVERWRITE and replace all current items in the menu.\n\n" +
     "Are you sure you want to proceed?"
   );
   if (!proceed) return;
@@ -4717,6 +5416,7 @@ async function handleMenuCsvFileSelected(event) {
       showToast(data.detail || "Import failed");
     } else {
       showToast(data.message || `Menu imported successfully (${data.count} items).`);
+      await loadCategories();
       await loadMenu();
     }
   } catch (err) {
@@ -4735,6 +5435,17 @@ let auditCurrentPage = 1;
 let auditPageSize = 20;
 let auditTotalPages = 1;
 let auditTotalItems = 0;
+
+function auditActionBadge(action) {
+  const a = String(action || "").toUpperCase();
+  if (a.includes("PAID") || a === "LOGIN_SUCCESS" || a === "CATEGORY_ADD" || a === "MENU_ADD") {
+    return `<span class="badge badge-paid">${esc(a)}</span>`;
+  }
+  if (a.includes("DELETE") || a.includes("VOID") || a === "LOGIN_FAILED" || a.includes("REFUND")) {
+    return `<span class="badge badge-cancelled">${esc(a)}</span>`;
+  }
+  return `<span class="badge badge-pending">${esc(a)}</span>`;
+}
 
 async function loadAuditLogs(page = auditCurrentPage, pageSize = auditPageSize) {
   auditCurrentPage = page;
@@ -4763,7 +5474,7 @@ async function loadAuditLogs(page = auditCurrentPage, pageSize = auditPageSize) 
           <td>#${esc(l.id)}</td>
           <td>${esc(formatDateTime(l.timestamp))}</td>
           <td style="font-weight:600;">${esc(l.cashier_name)}</td>
-          <td><span class="badge badge-pending">${esc(l.action)}</span></td>
+          <td>${auditActionBadge(l.action)}</td>
           <td style="font-family:monospace; font-size:0.82rem;">${esc(l.details)}</td>
         </tr>
       `).join("");
@@ -4772,7 +5483,7 @@ async function loadAuditLogs(page = auditCurrentPage, pageSize = auditPageSize) 
       mobileList.innerHTML = logs.map(l => `
         <div class="audit-mobile-card">
           <div class="amc-head">
-            <span class="badge badge-pending">${esc(l.action)}</span>
+            ${auditActionBadge(l.action)}
             <span class="amc-time">${esc(formatDateTime(l.timestamp))}</span>
           </div>
           <div class="amc-meta">
@@ -4925,7 +5636,7 @@ async function submitChangePassword(e) {
 }
 
 async function refreshAll() {
-  await Promise.all([loadAdminUser(), loadBills(), loadMenu(), loadAuditLogs(), loadArchives(), loadFeedbacks()]);
+  await Promise.all([loadAdminUser(), loadCategories(), loadBills(), loadMenu(), loadAuditLogs(), loadFeedbacks()]);
 }
 
 refreshAll();
@@ -4973,7 +5684,7 @@ async function loadFeedbacks() {
     const mobileList = document.getElementById("feedbacksMobileList");
 
     if (!feedbacks.length) {
-      if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:2.5rem;">No customer feedbacks submitted yet.</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:2.5rem;">No customer feedbacks submitted yet.</td></tr>';
       if (mobileList) mobileList.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:2rem;">No customer feedbacks submitted yet.</div>';
       return;
     }
@@ -4988,16 +5699,11 @@ async function loadFeedbacks() {
           ? fb.prefix_comment.split(",").map(t => `<span class="fb-badge-pill">${esc(t.trim())}</span>`).join("")
           : '<span style="color:#94a3b8; font-style:italic;">—</span>';
 
-        const photoHtml = fb.has_image && fb.image_url
-          ? `<img src="${fb.image_url}" alt="Plate" class="feedback-photo-thumb" onclick="viewPhoto('${fb.image_url}')" title="Click to enlarge" loading="lazy">`
-          : '<span style="font-size:0.75rem; color:#94a3b8; font-style:italic;">No photo</span>';
-
         return `
           <tr>
             <td style="font-size:0.82rem; color:#64748b; white-space:nowrap;">${esc(fb.created_at_local)}</td>
             <td><span class="badge" style="background:#f1f5f9; color:#0f172a; font-weight:700;">#${esc(fb.bill_number)}</span></td>
             <td style="font-size:0.84rem; font-weight:600; color:#1e293b;">${esc(fb.phone || "—")}</td>
-            <td style="text-align:center;">${photoHtml}</td>
             <td><span class="feedback-stars-gold">${starsStr}</span> <span style="font-size:0.78rem; font-weight:700; color:#64748b;">(${fb.rating}.0)</span></td>
             <td>${tagsHtml}</td>
             <td style="font-size:0.84rem; color:#334155; max-width:260px; word-break:break-word; overflow-wrap:anywhere;">${fb.comment ? `“${esc(fb.comment)}”` : '<span style="color:#94a3b8; font-style:italic;">—</span>'}</td>
@@ -5015,9 +5721,6 @@ async function loadFeedbacks() {
         const tagsHtml = fb.prefix_comment
           ? fb.prefix_comment.split(",").map(t => `<span class="fb-badge-pill">${esc(t.trim())}</span>`).join("")
           : "";
-        const photoHtml = fb.has_image && fb.image_url
-          ? `<img src="${fb.image_url}" alt="Plate" class="feedback-photo-thumb" onclick="viewPhoto('${fb.image_url}')" title="Click to enlarge" loading="lazy">`
-          : "";
 
         return `
           <div class="fb-mobile-card">
@@ -5026,7 +5729,6 @@ async function loadFeedbacks() {
                 <span class="badge" style="background:#f1f5f9; color:#0f172a; font-weight:700;">#${esc(fb.bill_number)}</span>
                 <span style="font-size:0.78rem; color:#64748b; margin-left:0.4rem;">${esc(fb.created_at_local)}</span>
               </div>
-              ${photoHtml}
             </div>
             <div style="display:flex; align-items:center; justify-content:space-between;">
               <span class="feedback-stars-gold">${starsStr} (${fb.rating}.0)</span>
@@ -5268,334 +5970,6 @@ function setHourPreset(start, end) {
   document.getElementById("opHourStartInput").value = start;
   document.getElementById("opHourEndInput").value = end;
 }
-
-// ==================== ARCHIVES & FAILED SCANS ====================
-
-function setArchivePeriod(period, btn) {
-  archiveCurrentPeriod = period;
-  if (btn) {
-    document.querySelectorAll("#archivePeriodPills .range-pill").forEach(p => p.classList.remove("active"));
-    btn.classList.add("active");
-  }
-  archiveCurrentPage = 1;
-  loadArchives(1);
-}
-
-function onArchiveFilterChange() {
-  archiveCurrentPage = 1;
-  loadArchives(1);
-}
-
-function formatRejectionCode(code) {
-  if (!code || code === "None") return "None";
-  const map = {
-    UNREADABLE_PHOTO: "Unreadable / Blurry",
-    NOT_A_PLATE: "Not a Food Plate",
-    NO_FOOD_DETECTED: "No Food Detected",
-    NO_MATCHING_DISHES: "Dishes Not on Menu",
-    AI_SERVICE_ERROR: "AI Service Error",
-    IMAGE_TOO_LARGE: "Image Too Large",
-  };
-  return map[code] || code.replace(/_/g, " ");
-}
-
-function rejectionBadge(code) {
-  const c = code || "UNKNOWN";
-  let bg = "#f1f5f9";
-  let fg = "#475569";
-  let border = "#e2e8f0";
-  if (c === "UNREADABLE_PHOTO") {
-    bg = "#fef3c7"; fg = "#92400e"; border = "#fde68a";
-  } else if (c === "NOT_A_PLATE") {
-    bg = "#fee2e2"; fg = "#b91c1c"; border = "#fecaca";
-  } else if (c === "NO_FOOD_DETECTED") {
-    bg = "#ffedd5"; fg = "#c2410c"; border = "#fed7aa";
-  } else if (c === "NO_MATCHING_DISHES") {
-    bg = "#f3e8ff"; fg = "#7e22ce"; border = "#e9d5ff";
-  } else if (c === "AI_SERVICE_ERROR") {
-    bg = "#ffe4e6"; fg = "#be123c"; border = "#fecdd3";
-  }
-  return `<span class="badge" style="background:${bg}; color:${fg}; border:1px solid ${border}; font-weight:700; font-size:0.75rem; padding:0.25rem 0.55rem; border-radius:6px;">${escapeHtml(formatRejectionCode(c))}</span>`;
-}
-
-async function loadArchives(page = 1) {
-  archiveCurrentPage = page;
-  const tbody = document.getElementById("archiveTableBody");
-  const mobileList = document.getElementById("archiveMobileList");
-  if (tbody) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2.5rem; color:#94a3b8;"><div class="spinner-sm" style="display:inline-block; margin-right:0.5rem; vertical-align:middle;"></div>Loading scan archives...</td></tr>`;
-  }
-
-  const code = document.getElementById("archiveCodeFilter")?.value || "all";
-  const scanType = document.getElementById("archiveTypeFilter")?.value || "all";
-  const search = (document.getElementById("archiveSearchInput")?.value || "").trim();
-
-  const params = new URLSearchParams({
-    period: archiveCurrentPeriod,
-    code: code,
-    scan_type: scanType,
-    page: String(archiveCurrentPage),
-    page_size: String(archivePageSize),
-  });
-  if (search) params.append("q", search);
-
-  try {
-    const res = await fetch(`/api/admin/failed-scans?${params.toString()}`);
-    if (!res.ok) {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#ef4444;">Failed to load archives. Please try again.</td></tr>`;
-      return;
-    }
-    const data = await res.json();
-    currentArchiveItems = data.items || [];
-    const pagination = data.pagination || {};
-    const summary = data.summary || {};
-
-    // Update KPI cards
-    const totalEl = document.getElementById("archiveTotalFailed");
-    if (totalEl) totalEl.textContent = summary.total_failed ?? 0;
-    const todayEl = document.getElementById("archiveTodayFailed");
-    if (todayEl) todayEl.textContent = summary.today_failed ?? 0;
-    const retriesEl = document.getElementById("archiveRetriesCount");
-    if (retriesEl) retriesEl.textContent = summary.retries_failed ?? 0;
-    const topReasonEl = document.getElementById("archiveTopReason");
-    if (topReasonEl) {
-      topReasonEl.textContent = formatRejectionCode(summary.top_rejection || "None");
-    }
-
-    renderArchives(currentArchiveItems);
-    renderArchivePagination(pagination);
-  } catch (err) {
-    console.error("Load archives error:", err);
-    if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#ef4444;">Network error while loading archives.</td></tr>`;
-  }
-}
-
-function renderArchives(items) {
-  const tbody = document.getElementById("archiveTableBody");
-  const mobileList = document.getElementById("archiveMobileList");
-
-  if (!items || items.length === 0) {
-    if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:3rem 1rem; color:#94a3b8;">
-        <div style="font-size:1rem; font-weight:600; color:#64748b; margin-bottom:0.25rem;">No failed scan records found</div>
-        <div style="font-size:0.8rem;">No rejected scans match the selected period and filters.</div>
-      </td></tr>`;
-    }
-    if (mobileList) {
-      mobileList.innerHTML = `<div style="text-align:center; padding:2.5rem 1rem; color:#94a3b8; font-size:0.85rem;">No failed scan records found</div>`;
-    }
-    return;
-  }
-
-  // Desktop Table
-  if (tbody) {
-    tbody.innerHTML = items.map(item => {
-      const imgHtml = item.has_image
-        ? `<img src="${item.image_url}" alt="Failed Scan" onclick="openArchiveDetailModal(${item.id})" style="width:48px; height:48px; object-fit:cover; border-radius:8px; cursor:pointer; border:1px solid #e2e8f0; transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'" loading="lazy">`
-        : `<div style="width:48px; height:48px; border-radius:8px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.68rem; font-weight:600;">No img</div>`;
-
-      const isRetryBadge = item.is_retry
-        ? `<span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700; font-size:0.72rem; padding:0.15rem 0.45rem; border-radius:4px;">Retry Scan</span>`
-        : `<span class="badge" style="background:#f1f5f9; color:#64748b; font-size:0.72rem; padding:0.15rem 0.45rem; border-radius:4px;">Initial Scan</span>`;
-
-      const billHtml = item.bill_number
-        ? `<div style="margin-top:0.3rem;"><span style="font-size:0.75rem; color:#64748b;">Bill:</span> <strong style="color:#0f172a; font-size:0.82rem;">#${escapeHtml(item.bill_number)}</strong></div>`
-        : "";
-
-      const rawAiPill = item.raw_ai_response
-        ? `<span style="display:inline-block; margin-left:0.35rem; font-size:0.68rem; font-weight:700; color:#4338ca; background:#e0e7ff; padding:0.1rem 0.35rem; border-radius:4px;">AI Raw</span>`
-        : "";
-
-      const viewBillBtn = item.bill_number
-        ? `<button type="button" class="btn btn-dark btn-sm" onclick="viewBillPdfPreview('${escapeHtml(item.bill_number)}')" title="View Bill #${escapeHtml(item.bill_number)} PDF" style="gap:0.3rem; padding:0.3rem 0.6rem; font-size:0.75rem;">
-            <svg style="width:12px; height:12px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-            <span>View Bill</span>
-          </button>`
-        : "";
-
-      return `
-        <tr>
-          <td style="padding:0.6rem 0.75rem; vertical-align:middle;">${imgHtml}</td>
-          <td style="padding:0.6rem 0.75rem; vertical-align:middle;">
-            <div style="font-weight:600; color:#0f172a; font-size:0.83rem;">${escapeHtml(item.created_at_local || "---")}</div>
-            <div style="font-size:0.72rem; color:#94a3b8;">MYT Server Time</div>
-          </td>
-          <td style="padding:0.6rem 0.75rem; vertical-align:middle;">
-            ${rejectionBadge(item.rejection_code)}
-          </td>
-          <td style="padding:0.6rem 0.75rem; vertical-align:middle; max-width:300px;">
-            <div style="color:#334155; font-size:0.83rem; line-height:1.4; word-break:break-word;">
-              ${escapeHtml(item.rejection_message || "Rejection without custom message")}
-              ${rawAiPill}
-            </div>
-          </td>
-          <td style="padding:0.6rem 0.75rem; vertical-align:middle;">
-            <div>${isRetryBadge}</div>
-            ${billHtml}
-            <div style="font-size:0.72rem; color:#94a3b8; margin-top:0.15rem;">IP: ${escapeHtml(item.ip || "---")}</div>
-          </td>
-          <td style="padding:0.6rem 0.75rem; text-align:right; vertical-align:middle;">
-            <div style="display:flex; justify-content:flex-end; align-items:center; gap:0.4rem; flex-wrap:wrap;">
-              <button type="button" class="btn btn-outline btn-sm" onclick="openArchiveDetailModal(${item.id})" style="padding:0.3rem 0.6rem; font-size:0.75rem;">Inspect</button>
-              ${viewBillBtn}
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join("");
-  }
-
-  // Mobile Cards
-  if (mobileList) {
-    mobileList.innerHTML = items.map(item => {
-      const imgHtml = item.has_image
-        ? `<img src="${item.image_url}" alt="Failed Scan" onclick="openArchiveDetailModal(${item.id})" style="width:64px; height:64px; object-fit:cover; border-radius:10px; cursor:pointer; border:1px solid #e2e8f0;" loading="lazy">`
-        : `<div style="width:64px; height:64px; border-radius:10px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.7rem; font-weight:600;">No img</div>`;
-
-      const isRetryBadge = item.is_retry
-        ? `<span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700; font-size:0.7rem; padding:0.15rem 0.4rem; border-radius:4px;">Retry</span>`
-        : `<span class="badge" style="background:#f1f5f9; color:#64748b; font-size:0.7rem; padding:0.15rem 0.4rem; border-radius:4px;">Initial</span>`;
-
-      const billHtml = item.bill_number
-        ? `<div style="font-size:0.8rem; margin-top:0.25rem;"><span style="color:#64748b;">Bill:</span> <strong style="color:#0f172a;">#${escapeHtml(item.bill_number)}</strong></div>`
-        : "";
-
-      const viewBillBtn = item.bill_number
-        ? `<button type="button" class="btn btn-dark btn-sm bmc-btn" onclick="viewBillPdfPreview('${escapeHtml(item.bill_number)}')">
-            <svg style="width:12px; height:12px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-            <span>View Bill</span>
-          </button>`
-        : "";
-
-      return `
-        <div class="bill-mobile-card" style="display:flex; flex-direction:column; gap:0.75rem; padding:1rem; border:1px solid #e2e8f0; border-radius:12px; background:#fff; margin-bottom:0.75rem;">
-          <div style="display:flex; gap:0.85rem; align-items:flex-start;">
-            ${imgHtml}
-            <div style="flex:1; min-width:0;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; margin-bottom:0.35rem;">
-                ${rejectionBadge(item.rejection_code)}
-                ${isRetryBadge}
-              </div>
-              <div style="font-size:0.82rem; font-weight:600; color:#0f172a;">${escapeHtml(item.created_at_local || "---")}</div>
-              ${billHtml}
-            </div>
-          </div>
-          <div style="font-size:0.82rem; color:#475569; background:#f8fafc; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid #f1f5f9; line-height:1.4;">
-            ${escapeHtml(item.rejection_message || "Rejection without message")}
-          </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; padding-top:0.25rem;">
-            <div style="font-size:0.72rem; color:#94a3b8;">IP: ${escapeHtml(item.ip || "---")}</div>
-            <div style="display:flex; gap:0.4rem;">
-              <button type="button" class="btn btn-outline btn-sm bmc-btn" onclick="openArchiveDetailModal(${item.id})">Inspect</button>
-              ${viewBillBtn}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join("");
-  }
-}
-
-function renderArchivePagination(pagination) {
-  const bar = document.getElementById("archivePaginationBar");
-  const info = document.getElementById("archivePaginationInfo");
-  const controls = document.getElementById("archivePaginationControls");
-  if (!bar || !info || !controls) return;
-
-  const total = pagination.total_items || 0;
-  const curPage = pagination.page || 1;
-  const totalPages = pagination.total_pages || 1;
-  archiveTotalPages = totalPages;
-
-  info.textContent = total > 0
-    ? `Showing page ${curPage} of ${totalPages} (${total} total records)`
-    : "Showing 0 archives";
-
-  if (totalPages <= 1) {
-    controls.innerHTML = "";
-    return;
-  }
-
-  controls.innerHTML = `
-    <button class="pagination-btn" onclick="changeArchivePage(${curPage - 1})" ${curPage <= 1 ? "disabled" : ""}>&laquo; Prev</button>
-    <span style="font-size:0.8rem; color:#64748b; font-weight:600;">Page ${curPage} / ${totalPages}</span>
-    <button class="pagination-btn" onclick="changeArchivePage(${curPage + 1})" ${curPage >= totalPages ? "disabled" : ""}>Next &raquo;</button>
-  `;
-}
-
-function changeArchivePage(newPage) {
-  if (newPage < 1 || newPage > archiveTotalPages) return;
-  loadArchives(newPage);
-}
-
-function openArchiveDetailModal(scanId) {
-  const item = currentArchiveItems.find(x => x.id === scanId);
-  if (!item) return;
-
-  const modal = document.getElementById("archiveModal");
-  if (!modal) return;
-
-  const codeBadge = document.getElementById("archiveModalCodeBadge");
-  if (codeBadge) {
-    codeBadge.textContent = formatRejectionCode(item.rejection_code);
-  }
-
-  const imgEl = document.getElementById("archiveModalImg");
-  const imgBox = document.getElementById("archiveModalImgBox");
-  if (item.has_image) {
-    imgBox.style.display = "flex";
-    imgEl.src = item.image_url;
-  } else {
-    imgBox.style.display = "none";
-    imgEl.src = "";
-  }
-
-  const reasonEl = document.getElementById("archiveModalReasonText");
-  if (reasonEl) reasonEl.textContent = item.rejection_message || "No explanation recorded";
-
-  const timeEl = document.getElementById("archiveModalTime");
-  if (timeEl) timeEl.textContent = item.created_at_local || "---";
-
-  const contextEl = document.getElementById("archiveModalContext");
-  if (contextEl) {
-    let ctxText = item.is_retry ? "Retry Attempt" : "Initial Food Scan";
-    if (item.bill_number) {
-      ctxText += ` (Bill #${item.bill_number})`;
-    }
-    contextEl.textContent = ctxText;
-  }
-
-  const aiBox = document.getElementById("archiveModalAiBox");
-  const aiPre = document.getElementById("archiveModalAiPre");
-  if (item.raw_ai_response && item.raw_ai_response.trim()) {
-    aiBox.style.display = "block";
-    aiPre.textContent = item.raw_ai_response;
-  } else {
-    aiBox.style.display = "none";
-    aiPre.textContent = "";
-  }
-
-  const billBox = document.getElementById("archiveModalBillActionBox");
-  const btnViewBill = document.getElementById("btnArchiveModalViewBill");
-  if (item.bill_number && btnViewBill) {
-    billBox.style.display = "block";
-    btnViewBill.onclick = () => viewBillPdfPreview(item.bill_number);
-    btnViewBill.innerHTML = `
-      <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-      <span>View Bill #${escapeHtml(item.bill_number)} PDF Preview</span>
-    `;
-  } else if (billBox) {
-    billBox.style.display = "none";
-  }
-
-  modal.classList.add("open");
-}
-
-function closeArchiveModal() {
-  const modal = document.getElementById("archiveModal");
-  if (modal) modal.classList.remove("open");
-}
-
 </script>
 </body>
 </html>

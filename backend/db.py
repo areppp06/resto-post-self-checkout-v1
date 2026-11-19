@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, event, Column, Integer, String, Float, Boo
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import NullPool
 from datetime import datetime
+import json
 import os
 from dotenv import load_dotenv
 from pathlib import Path
@@ -46,6 +47,14 @@ if _is_sqlite:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+class Category(Base):
+    __tablename__ = "categories"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    icon = Column(String, default="restaurant")
+    sort_order = Column(Integer, default=0, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class Dish(Base):
     __tablename__ = "dishes"
     id = Column(Integer, primary_key=True, index=True)
@@ -56,6 +65,9 @@ class Dish(Base):
     unit = Column(String, default="portion")
     description = Column(Text, default="")
     pieces_per_portion = Column(Integer, default=1)
+    image_key = Column(String, default="")
+    categories = Column(Text, default="[]")  # JSON array of up to 3 category names
+    sort_order = Column(Integer, default=0, index=True)
 
 class Cashier(Base):
     __tablename__ = "cashiers"
@@ -198,7 +210,23 @@ def init_db():
             conn.exec_driver_sql("ALTER TABLE dishes ADD COLUMN description TEXT DEFAULT ''")
         if "pieces_per_portion" not in columns:
             conn.exec_driver_sql("ALTER TABLE dishes ADD COLUMN pieces_per_portion INTEGER DEFAULT 1")
+        if "image_key" not in columns:
+            conn.exec_driver_sql("ALTER TABLE dishes ADD COLUMN image_key TEXT DEFAULT ''")
+        if "categories" not in columns:
+            conn.exec_driver_sql("ALTER TABLE dishes ADD COLUMN categories TEXT DEFAULT '[]'")
+        if "sort_order" not in columns:
+            conn.exec_driver_sql("ALTER TABLE dishes ADD COLUMN sort_order INTEGER DEFAULT 0")
         conn.exec_driver_sql("UPDATE dishes SET pieces_per_portion = 1 WHERE pieces_per_portion IS NULL")
+        conn.exec_driver_sql("UPDATE dishes SET categories = '[]' WHERE categories IS NULL OR categories = ''")
+        conn.exec_driver_sql("UPDATE dishes SET image_key = '' WHERE image_key IS NULL")
+        conn.exec_driver_sql("UPDATE dishes SET sort_order = id WHERE sort_order IS NULL OR sort_order = 0")
+
+        cat_columns = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(categories)")]
+        if cat_columns and "icon" not in cat_columns:
+            conn.exec_driver_sql("ALTER TABLE categories ADD COLUMN icon TEXT DEFAULT 'restaurant'")
+        if cat_columns and "sort_order" not in cat_columns:
+            conn.exec_driver_sql("ALTER TABLE categories ADD COLUMN sort_order INTEGER DEFAULT 0")
+
         session_columns = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(sessions)")]
         if session_columns and "bill_number" not in session_columns:
             conn.exec_driver_sql("ALTER TABLE sessions ADD COLUMN bill_number TEXT DEFAULT ''")
@@ -228,20 +256,8 @@ def init_db():
         if cooldown_columns and "reason" not in cooldown_columns:
             conn.exec_driver_sql("ALTER TABLE client_cooldowns ADD COLUMN reason TEXT DEFAULT ''")
         conn.exec_driver_sql(
-            "UPDATE sessions SET status = 'void', void_reason = 'Needed Cashier Assistance' "
-            "WHERE status = 'needs_cashier'"
-        )
-        conn.exec_driver_sql(
-            "UPDATE sessions SET status = 'void', void_reason = 'Customer Cancelled' "
-            "WHERE status = 'cancelled' AND (void_reason IS NULL OR void_reason = '')"
-        )
-        conn.exec_driver_sql(
-            "UPDATE sessions SET void_reason = 'Exceeded 4 Retries Limit' "
-            "WHERE status = 'void' AND (void_reason IS NULL OR void_reason = '') AND retake_count >= 4"
-        )
-        conn.exec_driver_sql(
-            "UPDATE sessions SET void_reason = 'Bill timed out' "
-            "WHERE status = 'void' AND (void_reason IS NULL OR void_reason = '' OR void_reason LIKE 'Ghosted / Stale Bill%')"
+            "UPDATE sessions SET status = 'open', void_reason = '' "
+            "WHERE status != 'paid'"
         )
     db = SessionLocal()
     # Backfill bill_number for any existing sessions missing one
@@ -258,17 +274,94 @@ def init_db():
             seq += 1
             s.bill_number = format_bill_number(seq)
         db.commit()
+
+    # Seed default categories if empty
+    if db.query(Category).count() == 0:
+        default_cats = [
+            Category(name="Coffee & Espresso", icon="coffee", sort_order=0),
+            Category(name="Bakery & Pastries", icon="bakery_dining", sort_order=1),
+            Category(name="Sandwiches & Bowls", icon="lunch_dining", sort_order=2),
+            Category(name="Cold Drinks", icon="glass_cup", sort_order=3),
+            Category(name="Desserts & Sweets", icon="cake", sort_order=4),
+        ]
+        db.add_all(default_cats)
+        db.commit()
+
     # Seed default dishes if empty
     if db.query(Dish).count() == 0:
         seeds = [
-            Dish(name="Chicken", price=5.0, available=True),
-            Dish(name="Rice", price=1.0, available=True),
-            Dish(name="Vegetables", price=2.0, available=True),
-            Dish(name="Fish (per block)", price=5.0, available=True),
-            Dish(name="Catfish", price=4.0, available=True),
-            Dish(name="Ikan bawal (per piece)", price=6.0, available=True),
-            Dish(name="Beef", price=8.0, available=False),
-            Dish(name="Lamb", price=9.0, available=False),
+            Dish(
+                name="Iced Caramel Macchiato",
+                price=5.75,
+                available=True,
+                description="Artisanal iced caramel macchiato with rich espresso layers, creamy milk, and amber caramel drizzle.",
+                categories=json.dumps(["Coffee & Espresso", "Cold Drinks"]),
+                image_key="https://lh3.googleusercontent.com/aida-public/AB6AXuBQ6F__P-OQ_nMs2B_IFbv1gdurxL98OEzZZnqn3kVaBaXalVkbgSWLwrNe1LuACH_mAxQAQZEOrOyHQkw17Pk-X9bsLDhZrfe_p5AMs7X_7H5KKqMv7PyI5UeaC3klBY6tpZf1VmWP9UA_KDu_ACt5oO3c2JlFIOK3KQCZc1fo1vATlXSZBVFT5u49V-r327Ph6HHZT3NUlJ3pnMRBYFJaPs77fxdj7cCQJCsQIMrA",
+            ),
+            Dish(
+                name="Artisan Avocado Sourdough",
+                price=11.50,
+                available=True,
+                description="Rustic sliced avocado toast topped with vibrant microgreens, cracked black pepper, and toasted sesame seeds on crusty sourdough.",
+                categories=json.dumps(["Sandwiches & Bowls", "Bakery & Pastries"]),
+                image_key="https://lh3.googleusercontent.com/aida-public/AB6AXuCbITZB5tgXLfCjCeExM6k1PTqLd9NfDj_LmnthMZcawDE4vh30g-WPNlYU23KWDdsC6TK49yzZw-y1CAOFKuoCbLwFstrlrioFOeJ6A3WincrIH445JFZyfKMifCPPqqha9NcqF_hXAAqyFN-2xqs4EIbjIzgwMpDOgGTQLy4tKSehpAqTFNCrqFwhfCgkOnIV6ZS1mQ5Jhr9UzJqjK4fom76w2gyzkJWZ1EUF3spO",
+            ),
+            Dish(
+                name="Almond Croissant",
+                price=4.25,
+                available=True,
+                description="Flaky golden brown French almond croissant topped with powdered sugar and toasted sliced almonds.",
+                categories=json.dumps(["Bakery & Pastries", "Desserts & Sweets"]),
+                image_key="https://lh3.googleusercontent.com/aida-public/AB6AXuC_6u27K0pv-n1qw7A0Br4VJTFa7iOSUtbzxtftDvmkfkfOO4I_tLEf3TdaJp-hIRcyKJ48EkvVI2AFpy36q3XcvQG6pTjioQtlKNTTd8RHNLOfXu-vaGO7C1MR_00qf_q8Qrx8fma0uB-Yj4egbhkE92ZJtc0WCK9Oj-LHOj3k34RbhGt6AL6P_sUZ0U38yKVi80GXeuBFm_6Vxy8H5IVGxNQswqx7CC0TwVS3pyDM",
+            ),
+            Dish(
+                name="Cold Brew Nitro",
+                price=5.25,
+                available=True,
+                description="Velvety cold brew nitro coffee cascading with a creamy stout-like head of foam.",
+                categories=json.dumps(["Coffee & Espresso", "Cold Drinks"]),
+                image_key="https://lh3.googleusercontent.com/aida-public/AB6AXuDH8NTaBn8DwxGY8Nx96cQ4zlJJWZjECknd3RIsGHJ-mBMmoiEbeV_JMIBo4TN07jJrOQjc1Op4XezGqNOo0WN8IyPQgVTqSbotbICooBwDSmfcJ2IFvaznyt7teXrN1nmlaQIYstiJ8idYbGiUFj4kAzBkNNSK4qWZQmN1WjcBrS_7l-CzdjTr6A9TvahBhbNOVxGALbrQECLn9IyK8b15VUJrABz0y8NH0uLh04Yh",
+            ),
+            Dish(
+                name="Matcha Green Tea Latte",
+                price=5.95,
+                available=True,
+                description="Ceremonial grade emerald matcha green tea latte with velvety steamed milk.",
+                categories=json.dumps(["Coffee & Espresso"]),
+                image_key="https://lh3.googleusercontent.com/aida-public/AB6AXuC4JmYoB_RP9j0UvsY4UCXaCKDonknboLW3yc1QcmadZp4Dv7cC5rU8mj7bARLNloY2Umfb3SUV72sxpl1E8rxp3LLIS12aI6jVgp4d_sQmLhyVif4RmMvoOpvYSs8XG7Qef2jEnbS-XH1ZA4LhVRXCLixFixa5IlmYKAmiS9onnZksT41zgoKAKxYcjV103uPb3VqiZAXQMAu1D8AS8EacAoKu5GWur-Vbswuzx6Qd",
+            ),
+            Dish(
+                name="Smoked Turkey Panini",
+                price=12.00,
+                available=True,
+                description="Toasted hot pressed panini with melted provolone cheese, smoked turkey breast, baby spinach, and pesto on golden ciabatta.",
+                categories=json.dumps(["Sandwiches & Bowls"]),
+                image_key="https://lh3.googleusercontent.com/aida-public/AB6AXuByGBG74jJaVkKhBMjAkxNDhm-1UKlJ-C2IuJqmm7n1BjpfABwrIKReclt9Z4FJPxuOlrnaRW65Ipw1-vb9DFLBn9soHvXHYdGqS_zXOLVkDkj--kef1Hzo8jSiDNVC0Y8fUCNDfbMYNUM4ZVaatMTlY61jHoLqwbvPj-nmm8Xf19KJ1kma6npXDo5AIxvCCKuJ1Hrhw_hXci-Fs-jiV-2CdIEtErfZj2G0Ag_IbKRW",
+            ),
+            Dish(
+                name="Acai Superfood Bowl",
+                price=9.80,
+                available=True,
+                description="Organic acai smoothie bowl topped with fresh sliced strawberries, blueberries, chia seeds, toasted granola, and shaved coconut.",
+                categories=json.dumps(["Sandwiches & Bowls", "Desserts & Sweets"]),
+                image_key="https://lh3.googleusercontent.com/aida-public/AB6AXuDiLrCf4VUifI40kgmOsRQShSOqs4rqwQDdrBIFDVwi7QX7hq6ZOQ7flKO7hlsNnGLBvL20ld8lUw6OcyNd5OSFdEZZ2FwIPfLBLdd3PRfFJh2_tRx_CO4W6TXDlRlqJ5Mz_sIJP2LEfyfew0JYzwCZwQ5BG5V72YOB0SqDVwQ0uZUyqCg58VzLsxyU4Wmb-YLpJ5mlq_x-JwUaB-M7pbiVR-lfYops7t9I2R6Ylpfy",
+            ),
+            Dish(
+                name="Blueberry Scone",
+                price=3.80,
+                available=True,
+                description="Crumbly homemade bakery blueberry scone drizzled with sweet lemon vanilla glaze.",
+                categories=json.dumps(["Bakery & Pastries", "Desserts & Sweets"]),
+                image_key="https://lh3.googleusercontent.com/aida-public/AB6AXuD9AIaoBAp8FxfiELRa-dExF3bDKM0at5XEV-jo3YZOANNowXpEdUncOmljLXqbj8pPYGNIfUlC1yyjmwEkppFYokOI4lKNS9D435OeZQ-7R9UjZU-MNIvKgftivXv5XapZpAfPgFpcZiQKdcGyQfJP4vSkXdXZ7Ozmz5MlxyD9Ph3Hy4SqE2E-tKt8sYjZhOl9U1ZQnB6ePR0ybMJMPLmapaaoAzjARZISAmnlDaT8",
+            ),
+            Dish(
+                name="Chai Spiced Latte",
+                price=5.10,
+                available=True,
+                description="Steaming hot spiced chai latte with a generous dusting of cinnamon powder and star anise.",
+                categories=json.dumps(["Coffee & Espresso"]),
+                image_key="https://lh3.googleusercontent.com/aida-public/AB6AXuBa-F5oSXNU2-0tyPzoV0h16v3EDCfnDQ0FAQS-YBLyqay-aprDXkxymkiyZbVJ3M6uJfK3U_CROaI6Tvg1MwoyjC-gFZDKhsJbOr-2XEKS1nQtJ6VMvR_xpyvyt8VRSwQ9N41b9o1qcLSI40X_wvR_ep3ugzqFVUQRaWknhn3cmfwkUe5LwArWLaMme1ddswO1enby97gyXAMmTkOx8En-G6mLCN0v42ZqTAqVL6h_",
+            ),
         ]
         db.add_all(seeds)
         db.commit()

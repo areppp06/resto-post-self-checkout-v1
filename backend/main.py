@@ -1,3 +1,4 @@
+from __future__ import annotations
 import secrets
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Form, Request
 from fastapi.staticfiles import StaticFiles
@@ -26,7 +27,7 @@ from pathlib import Path
 from urllib.parse import quote
 from dotenv import dotenv_values
 
-from .db import ROOT, ENV_DIR, SessionLocal, init_db, Dish, Cashier, AuditLog, SessionBill, ClientCooldown, ScanAttempt, FailedScan, BillRefund, Feedback, AdminUser, AdminSession, next_bill_number
+from .db import ROOT, ENV_DIR, SessionLocal, init_db, Category, Dish, Cashier, AuditLog, SessionBill, ClientCooldown, ScanAttempt, FailedScan, BillRefund, Feedback, AdminUser, AdminSession, next_bill_number
 from .auth import hash_password, verify_password, create_admin_session, get_current_admin, require_admin_api, revoke_session, SESSION_COOKIE_NAME, SESSION_DURATION_DAYS, get_or_create_setup_token, burn_setup_token
 from .schemas import Dish as DishSchema, BillResponse, BillItem, ErrorResponse
 from .ai_service import recognize_food, RecognitionError
@@ -36,6 +37,7 @@ _IN_FLIGHT_REFUNDS: set[str] = set()
 _REFUND_LOCK = threading.Lock()
 
 UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
+MENU_UPLOAD_DIR = UPLOAD_DIR / "menu"
 
 FORBIDDEN_SESSION_HTML = """<!DOCTYPE html>
 <html>
@@ -255,6 +257,111 @@ async def _record_failed_scan(
 # Serve frontend
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
+def _guess_category_icon(name: str) -> str:
+    low = (name or "").strip().lower()
+    if any(k in low for k in ("coffee", "espresso", "latte", "tea", "mocha", "cappuccino")):
+        return "coffee"
+    if any(k in low for k in ("bakery", "pastry", "pastries", "bread", "croissant", "scone", "bun")):
+        return "bakery_dining"
+    if any(k in low for k in ("sandwich", "bowl", "lunch", "panini", "toast", "wrap", "salad")):
+        return "lunch_dining"
+    if any(k in low for k in ("cold", "drink", "beverage", "juice", "soda", "smoothie", "water")):
+        return "glass_cup"
+    if any(k in low for k in ("dessert", "sweet", "cake", "cookie", "ice cream", "brownie")):
+        return "cake"
+    if any(k in low for k in ("rice", "nasi", "main", "dinner", "meal", "noodle", "pasta")):
+        return "dinner_dining"
+    if any(k in low for k in ("side", "snack", "add", "fries", "tapas", "appetizer")):
+        return "tapas"
+    return "restaurant"
+
+def _parse_dish_categories(raw_val) -> list[str]:
+    if not raw_val:
+        return []
+    items = []
+    if isinstance(raw_val, list):
+        items = [str(x).strip() for x in raw_val if str(x).strip()]
+    else:
+        s = str(raw_val).strip()
+        if s.startswith("["):
+            try:
+                parsed = json.loads(s)
+                if isinstance(parsed, list):
+                    items = [str(x).strip() for x in parsed if str(x).strip()]
+            except Exception:
+                items = [x.strip() for x in re.split(r"[;|,]", s) if x.strip()]
+        else:
+            items = [x.strip() for x in re.split(r"[;|,]", s) if x.strip()]
+    deduped = []
+    seen = set()
+    for c in items:
+        low = c.casefold()
+        if low not in seen:
+            seen.add(low)
+            deduped.append(c)
+    return deduped[:3]
+
+def _clean_categories(raw_val, db: Session = None, auto_create: bool = False) -> list[str]:
+    if not raw_val:
+        return []
+    if isinstance(raw_val, list):
+        raw_list = [str(x).strip() for x in raw_val if str(x).strip()]
+    else:
+        s = str(raw_val).strip()
+        if s.startswith("["):
+            try:
+                parsed = json.loads(s)
+                raw_list = [str(x).strip() for x in parsed if str(x).strip()] if isinstance(parsed, list) else []
+            except Exception:
+                raw_list = [x.strip() for x in re.split(r"[;|,]", s) if x.strip()]
+        else:
+            raw_list = [x.strip() for x in re.split(r"[;|,]", s) if x.strip()]
+
+    deduped = []
+    seen = set()
+    for c in raw_list:
+        low = c.casefold()
+        if low not in seen:
+            seen.add(low)
+            deduped.append(c)
+
+    if len(deduped) > 3:
+        raise HTTPException(status_code=400, detail="Each menu item can be tagged with at most 3 categories")
+
+    if db is not None and deduped:
+        existing_cats = db.query(Category).order_by(Category.sort_order.asc(), Category.id.asc()).all()
+        cat_map = {c.name.casefold(): c.name for c in existing_cats}
+        max_order = max((c.sort_order or 0 for c in existing_cats), default=-1)
+        resolved = []
+        for c_name in deduped:
+            low = c_name.casefold()
+            if low in cat_map:
+                resolved.append(cat_map[low])
+            elif auto_create:
+                max_order += 1
+                new_cat = Category(
+                    name=c_name,
+                    icon=_guess_category_icon(c_name),
+                    sort_order=max_order,
+                )
+                db.add(new_cat)
+                db.flush()
+                cat_map[low] = new_cat.name
+                resolved.append(new_cat.name)
+            else:
+                resolved.append(c_name)
+        return resolved
+
+    return deduped
+
+def _dish_image_url(dish: Dish) -> str:
+    key = (getattr(dish, "image_key", "") or "").strip()
+    if not key:
+        return ""
+    if key.startswith("http://") or key.startswith("https://") or key.startswith("/"):
+        return key
+    return f"/api/menu/{dish.id}/image?v={quote(key)}"
+
 def _clean_description(value) -> str:
     text = str(value or "").strip()
     if len(text) > 500:
@@ -262,36 +369,30 @@ def _clean_description(value) -> str:
     return text
 
 def _clean_pieces(value):
-    if value is None or value == "":
-        return 1
-    try:
-        number = int(value)
-    except (TypeError, ValueError):
-        raise HTTPException(status_code=400, detail="Pieces per portion must be a whole number")
-    if number < 1 or number > 100:
-        raise HTTPException(status_code=400, detail="Pieces per portion must be from 1 to 100")
-    return number
+    return 1
 
-def _bill_quantity(raw_quantity: float, pieces_per_portion):
-    pieces = int(round(float(raw_quantity)))
-    if pieces < 1:
+def _bill_quantity(raw_quantity: float, pieces_per_portion=1):
+    qty = int(round(float(raw_quantity)))
+    if qty < 1:
         return 0, None
-    group = pieces_per_portion or 0
-    if group <= 1:
-        return pieces, None
-    return math.ceil(pieces / group), pieces
+    return qty, None
 
 def _dish_json(dish: Dish) -> dict:
+    cats = _parse_dish_categories(getattr(dish, "categories", "[]"))
+    img_url = _dish_image_url(dish)
     return {
         "id": dish.id,
         "name": dish.name,
-        "alias": dish.alias or "",
-        "display_name": (dish.alias or "").strip() or dish.name,
+        "display_name": dish.name,
         "price": dish.price,
-        "available": dish.available,
-        "unit": dish.unit,
+        "available": bool(dish.available),
+        "unit": dish.unit or "portion",
         "description": dish.description or "",
-        "pieces_per_portion": dish.pieces_per_portion or 1,
+        "categories": cats,
+        "image_key": getattr(dish, "image_key", "") or "",
+        "image_url": img_url,
+        "has_image": bool(img_url),
+        "sort_order": getattr(dish, "sort_order", 0) or 0,
     }
 
 def _dish_alias_map(db: Session = None) -> dict[str, str]:
@@ -300,14 +401,13 @@ def _dish_alias_map(db: Session = None) -> dict[str, str]:
         db = SessionLocal()
         close_after = True
     try:
-        dishes = db.query(Dish.name, Dish.alias).all()
+        dishes = db.query(Dish.name).all()
         mapping = {}
-        for name, alias in dishes:
+        for (name,) in dishes:
             if name:
-                disp = (alias or "").strip() or name
-                mapping[name] = disp
-                mapping[name.casefold()] = disp
-                mapping[" ".join(name.strip().casefold().split())] = disp
+                mapping[name] = name
+                mapping[name.casefold()] = name
+                mapping[" ".join(name.strip().casefold().split())] = name
         return mapping
     finally:
         if close_after:
@@ -488,32 +588,16 @@ def _find_active_bill(
     return None
 
 def _expire_stale_bills(db: Session) -> None:
-    cutoff = datetime.utcnow() - timedelta(minutes=BILL_EXPIRY_MINUTES)
-    stale = (
+    non_open = (
         db.query(SessionBill)
-        .filter(
-            or_(
-                SessionBill.status == "needs_cashier",
-                (
-                    SessionBill.status.in_(("open", "pending", "retaking"))
-                    & (func.coalesce(SessionBill.updated_at, SessionBill.created_at) < cutoff)
-                ),
-            )
-        )
+        .filter(SessionBill.status != "paid", SessionBill.status != "open")
         .all()
     )
-    if not stale:
+    if not non_open:
         return
-    now = datetime.utcnow()
-    for bill in stale:
-        if bill.status == "needs_cashier":
-            bill.status = "void"
-            bill.void_reason = bill.void_reason or "Needed Cashier Assistance"
-            bill.updated_at = now
-        else:
-            bill.status = "void"
-            bill.void_reason = "Bill timed out"
-            bill.updated_at = now
+    for bill in non_open:
+        bill.status = "open"
+        bill.void_reason = ""
     db.commit()
 
 def _scan_usage_status(
@@ -992,22 +1076,16 @@ async def about_page():
 async def pricelist_page():
     return FileResponse("frontend/pricelist.html", headers=NO_CACHE_HEADERS)
 
-@app.get("/guide")
-@app.get("/how-to-use")
-@app.get("/learn")
-async def guide_page():
-    return FileResponse("frontend/guide.html", headers=NO_CACHE_HEADERS)
-
 @app.get("/api/public-profile")
 def get_public_profile():
     return _restaurant_profile()
 
 @app.get("/api/pricelist")
 def get_public_pricelist(db: Session = Depends(get_db)):
-    dishes = db.query(Dish).order_by(Dish.name.asc()).all()
+    dishes = db.query(Dish).order_by(Dish.sort_order.asc(), Dish.id.asc()).all()
     latest_audit = (
         db.query(AuditLog)
-        .filter(AuditLog.action.like("MENU_%"))
+        .filter(or_(AuditLog.action.like("MENU_%"), AuditLog.action.like("CATEGORY_%")))
         .order_by(AuditLog.timestamp.desc())
         .first()
     )
@@ -1022,22 +1100,20 @@ def get_public_pricelist(db: Session = Depends(get_db)):
 
     items = []
     for d in dishes:
-        pieces = d.pieces_per_portion or 1
         unit = d.unit or "portion"
         price = round(float(d.price or 0.0), 2)
-        price_per_piece = round(price / pieces, 2) if pieces > 0 else price
-        display_name = (d.alias or "").strip() or d.name
+        cats = _parse_dish_categories(getattr(d, "categories", "[]"))
+        img_url = _dish_image_url(d)
         items.append({
             "id": d.id,
-            "name": display_name,
+            "name": d.name,
             "raw_name": d.name,
-            "alias": d.alias or "",
             "price": price,
             "unit": unit,
-            "pieces_per_portion": pieces,
-            "price_per_piece": price_per_piece,
             "available": bool(d.available),
             "description": d.description or "",
+            "categories": cats,
+            "image_url": img_url,
         })
 
     prof = _restaurant_profile()
@@ -1227,7 +1303,19 @@ def auth_login(payload: dict, request: Request, response: Response, db: Session 
 
 @app.post("/api/auth/logout")
 def auth_logout(request: Request, response: Response, db: Session = Depends(get_db)):
+    current_admin = get_current_admin(request, db)
     token = request.cookies.get(SESSION_COOKIE_NAME)
+    if current_admin:
+        try:
+            db.add(AuditLog(
+                cashier_id=current_admin.id,
+                admin_username=current_admin.username,
+                action="LOGOUT",
+                details=f"Admin '{current_admin.username}' signed out from IP {_client_ip(request)}"
+            ))
+            db.commit()
+        except Exception:
+            pass
     if token:
         revoke_session(db, token)
     response.delete_cookie(key=SESSION_COOKIE_NAME)
@@ -1267,21 +1355,20 @@ def auth_change_password(payload: dict, request: Request, db: Session = Depends(
     return {"ok": True, "message": "Password updated successfully. Other active sessions revoked."}
 
 @app.get("/pay")
-async def pay_page(request: Request, session: str = "", db: Session = Depends(get_db)):
+async def pay_page(request: Request, session: str = "", payment: str = "", db: Session = Depends(get_db)):
     if session:
         bill = db.query(SessionBill).filter(SessionBill.id == session).first()
-        if bill and bill.client_token:
-            current_admin = get_current_admin(request, db)
-            if not current_admin:
-                c_token = _get_client_token(request)
-                if not c_token or c_token != bill.client_token:
-                    return Response(
-                        content=FORBIDDEN_SESSION_HTML,
-                        status_code=403,
-                        media_type="text/html",
-                    )
-    return FileResponse("frontend/pay.html", headers=NO_CACHE_HEADERS)
+        if bill and bill.status == "paid":
+            return RedirectResponse(url=f"/payment/success?session={quote(session)}", status_code=303)
+        target = f"/?session={quote(session)}"
+        if payment:
+            target += f"&payment={quote(payment)}"
+        return RedirectResponse(url=target, status_code=303)
+    if payment:
+        return RedirectResponse(url=f"/?payment={quote(payment)}", status_code=303)
+    return RedirectResponse(url="/", status_code=303)
 
+@app.get("/success")
 @app.get("/payment/success")
 async def payment_success_page(request: Request, session: str = "", db: Session = Depends(get_db)):
     if session:
@@ -1298,40 +1385,354 @@ async def payment_success_page(request: Request, session: str = "", db: Session 
                     )
     return FileResponse("frontend/success.html", headers=NO_CACHE_HEADERS)
 
+@app.get("/api/categories")
+def get_categories(db: Session = Depends(get_db)):
+    cats = db.query(Category).order_by(Category.sort_order.asc(), Category.id.asc()).all()
+    dishes = db.query(Dish).all()
+    total_counts: dict[str, int] = {}
+    avail_counts: dict[str, int] = {}
+    for d in dishes:
+        d_cats = _parse_dish_categories(getattr(d, "categories", "[]"))
+        for c_name in d_cats:
+            low = c_name.casefold()
+            total_counts[low] = total_counts.get(low, 0) + 1
+            if d.available:
+                avail_counts[low] = avail_counts.get(low, 0) + 1
+
+    return [
+        {
+            "id": c.id,
+            "name": c.name,
+            "icon": c.icon or _guess_category_icon(c.name),
+            "sort_order": c.sort_order or 0,
+            "dish_count": total_counts.get(c.name.casefold(), 0),
+            "available_count": avail_counts.get(c.name.casefold(), 0),
+        }
+        for c in cats
+    ]
+
+@app.post("/api/admin/categories")
+def add_category(payload: dict, request: Request, db: Session = Depends(get_db)):
+    current_admin = require_admin_api(request, db)
+    name = str(payload.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Category name is required")
+    if len(name) > 60:
+        raise HTTPException(status_code=400, detail="Category name must be 60 characters or less")
+    existing = db.query(Category).filter(func.lower(Category.name) == name.casefold()).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="A category with this name already exists")
+
+    icon = str(payload.get("icon") or "").strip() or _guess_category_icon(name)
+    max_sort = db.query(func.max(Category.sort_order)).scalar()
+    next_sort = (int(max_sort) + 1) if max_sort is not None else 0
+
+    cat = Category(name=name, icon=icon, sort_order=next_sort)
+    db.add(cat)
+    db.add(AuditLog(
+        cashier_id=current_admin.id,
+        admin_username=current_admin.username,
+        action="CATEGORY_ADD",
+        details=f"Admin '{current_admin.username}' added category '{cat.name}'"
+    ))
+    db.commit()
+    db.refresh(cat)
+    return {
+        "id": cat.id,
+        "name": cat.name,
+        "icon": cat.icon,
+        "sort_order": cat.sort_order,
+        "dish_count": 0,
+        "available_count": 0,
+    }
+
+@app.put("/api/admin/categories/reorder")
+def reorder_categories(payload: dict, request: Request, db: Session = Depends(get_db)):
+    current_admin = require_admin_api(request, db)
+    cat_ids = payload.get("category_ids") or payload.get("ids") or []
+    if not isinstance(cat_ids, list):
+        raise HTTPException(status_code=400, detail="category_ids must be a list of category IDs")
+
+    cats = db.query(Category).all()
+    cat_map = {c.id: c for c in cats}
+    ordered_names = []
+    idx = 0
+    seen_ids = set()
+    for raw_id in cat_ids:
+        try:
+            cid = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if cid in cat_map and cid not in seen_ids:
+            seen_ids.add(cid)
+            cat_map[cid].sort_order = idx
+            ordered_names.append(cat_map[cid].name)
+            idx += 1
+
+    for c in sorted(cats, key=lambda x: (x.sort_order or 0, x.id)):
+        if c.id not in seen_ids:
+            c.sort_order = idx
+            ordered_names.append(c.name)
+            idx += 1
+
+    db.add(AuditLog(
+        cashier_id=current_admin.id,
+        admin_username=current_admin.username,
+        action="CATEGORY_REORDER",
+        details=f"Admin '{current_admin.username}' reordered categories: {', '.join(ordered_names)}"
+    ))
+    db.commit()
+    return {"ok": True, "categories": get_categories(db)}
+
+@app.put("/api/admin/categories/{cat_id}")
+def update_category(cat_id: int, payload: dict, request: Request, db: Session = Depends(get_db)):
+    current_admin = require_admin_api(request, db)
+    cat = db.query(Category).filter(Category.id == cat_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    old_name = cat.name
+    new_name = str(payload.get("name") if "name" in payload else cat.name).strip()
+    if not new_name:
+        raise HTTPException(status_code=400, detail="Category name cannot be empty")
+    if new_name.casefold() != old_name.casefold():
+        dup = db.query(Category).filter(func.lower(Category.name) == new_name.casefold(), Category.id != cat_id).first()
+        if dup:
+            raise HTTPException(status_code=409, detail="Another category with this name already exists")
+
+    cat.name = new_name
+    if "icon" in payload and str(payload.get("icon") or "").strip():
+        cat.icon = str(payload.get("icon")).strip()
+
+    if old_name != new_name:
+        for d in db.query(Dish).all():
+            d_cats = _parse_dish_categories(getattr(d, "categories", "[]"))
+            updated_cats = [new_name if c.casefold() == old_name.casefold() else c for c in d_cats]
+            if updated_cats != d_cats:
+                d.categories = json.dumps(updated_cats)
+
+    db.add(AuditLog(
+        cashier_id=current_admin.id,
+        admin_username=current_admin.username,
+        action="CATEGORY_UPDATE",
+        details=f"Admin '{current_admin.username}' updated category '{old_name}' -> '{new_name}'"
+    ))
+    db.commit()
+    return {"ok": True, "id": cat.id, "name": cat.name, "icon": cat.icon, "sort_order": cat.sort_order}
+
+@app.delete("/api/admin/categories/{cat_id}")
+def delete_category(cat_id: int, request: Request, db: Session = Depends(get_db)):
+    current_admin = require_admin_api(request, db)
+    cat = db.query(Category).filter(Category.id == cat_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    cat_name = cat.name
+    removed_from_count = 0
+    for d in db.query(Dish).all():
+        d_cats = _parse_dish_categories(getattr(d, "categories", "[]"))
+        filtered = [c for c in d_cats if c.casefold() != cat_name.casefold()]
+        if len(filtered) != len(d_cats):
+            d.categories = json.dumps(filtered)
+            removed_from_count += 1
+
+    db.delete(cat)
+    db.add(AuditLog(
+        cashier_id=current_admin.id,
+        admin_username=current_admin.username,
+        action="CATEGORY_DELETE",
+        details=f"Admin '{current_admin.username}' deleted category '{cat_name}' (untagged from {removed_from_count} menu item(s))"
+    ))
+    db.commit()
+    return {"status": "deleted", "id": cat_id, "name": cat_name}
+
 @app.get("/api/menu")
 def get_menu(db: Session = Depends(get_db)):
-    dishes = db.query(Dish).all()
+    dishes = db.query(Dish).order_by(Dish.sort_order.asc(), Dish.id.asc()).all()
     return [_dish_json(d) for d in dishes]
+
+@app.put("/api/admin/menu/reorder")
+def reorder_admin_menu(payload: dict, request: Request, db: Session = Depends(get_db)):
+    current_admin = require_admin_api(request, db)
+    raw_ids = payload.get("dish_ids")
+    if not isinstance(raw_ids, list) or not raw_ids:
+        raise HTTPException(status_code=400, detail="dish_ids list is required")
+
+    dishes = db.query(Dish).all()
+    dish_map = {d.id: d for d in dishes}
+    ordered_names = []
+    idx = 0
+    seen_ids = set()
+    for raw_id in raw_ids:
+        try:
+            did = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if did in dish_map and did not in seen_ids:
+            seen_ids.add(did)
+            dish_map[did].sort_order = idx + 1
+            ordered_names.append(dish_map[did].name)
+            idx += 1
+
+    for d in sorted(dishes, key=lambda x: (x.sort_order or 0, x.id)):
+        if d.id not in seen_ids:
+            d.sort_order = idx + 1
+            ordered_names.append(d.name)
+            idx += 1
+
+    summary = ", ".join(ordered_names[:6]) + ("..." if len(ordered_names) > 6 else "")
+    db.add(AuditLog(
+        cashier_id=current_admin.id,
+        admin_username=current_admin.username,
+        action="MENU_REORDER",
+        details=f"Admin '{current_admin.username}' reordered menu items: {summary}"
+    ))
+    db.commit()
+    return {"ok": True, "dishes": get_menu(db)}
+
+@app.get("/api/menu/{dish_id}/image")
+def get_menu_item_image(dish_id: int, db: Session = Depends(get_db)):
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+    if not dish or not getattr(dish, "image_key", ""):
+        raise HTTPException(status_code=404, detail="Menu photo not found")
+    key = dish.image_key.strip()
+    if key.startswith("http://") or key.startswith("https://"):
+        return RedirectResponse(url=key, status_code=302)
+    local_path = MENU_UPLOAD_DIR / Path(key).name
+    if not local_path.is_file():
+        alt_path = UPLOAD_DIR / key
+        if alt_path.is_file():
+            local_path = alt_path
+        else:
+            raise HTTPException(status_code=404, detail="Menu photo file not found")
+    ext = local_path.suffix.lower()
+    media_type = {
+        ".png": "image/png",
+        ".webp": "image/webp",
+        ".gif": "image/gif",
+    }.get(ext, "image/jpeg")
+    return FileResponse(local_path, media_type=media_type, headers={"Cache-Control": "public, max-age=3600"})
+
+@app.post("/api/menu/{dish_id}/photo")
+async def upload_menu_item_photo(
+    dish_id: int,
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    current_admin = require_admin_api(request, db)
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+    if not dish:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Please upload a valid image file (JPG, PNG, WEBP)")
+
+    image_bytes = await file.read()
+    if not image_bytes or len(image_bytes) < 100:
+        raise HTTPException(status_code=400, detail="Uploaded image file is empty or invalid")
+    if len(image_bytes) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Image exceeds 5MB limit")
+
+    orig_ext = Path(file.filename or "photo.jpg").suffix.lower()
+    if orig_ext not in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
+        orig_ext = ".jpg"
+
+    MENU_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    old_key = (getattr(dish, "image_key", "") or "").strip()
+    if old_key and not old_key.startswith("http"):
+        old_file = MENU_UPLOAD_DIR / Path(old_key).name
+        try:
+            if old_file.is_file():
+                old_file.unlink()
+        except OSError:
+            pass
+
+    new_filename = f"dish_{dish.id}_{uuid.uuid4().hex[:10]}{orig_ext}"
+    (MENU_UPLOAD_DIR / new_filename).write_bytes(image_bytes)
+    dish.image_key = f"menu/{new_filename}"
+
+    db.add(AuditLog(
+        cashier_id=current_admin.id,
+        admin_username=current_admin.username,
+        action="MENU_PHOTO_UPLOAD",
+        details=f"Admin '{current_admin.username}' uploaded photo for menu item '{dish.name}'"
+    ))
+    db.commit()
+    db.refresh(dish)
+    return _dish_json(dish)
+
+@app.delete("/api/menu/{dish_id}/photo")
+def delete_menu_item_photo(
+    dish_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    current_admin = require_admin_api(request, db)
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+    if not dish:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+
+    old_key = (getattr(dish, "image_key", "") or "").strip()
+    if old_key and not old_key.startswith("http"):
+        old_file = MENU_UPLOAD_DIR / Path(old_key).name
+        try:
+            if old_file.is_file():
+                old_file.unlink()
+        except OSError:
+            pass
+
+    dish.image_key = ""
+    db.add(AuditLog(
+        cashier_id=current_admin.id,
+        admin_username=current_admin.username,
+        action="MENU_PHOTO_DELETE",
+        details=f"Admin '{current_admin.username}' removed photo for menu item '{dish.name}'"
+    ))
+    db.commit()
+    db.refresh(dish)
+    return _dish_json(dish)
 
 @app.post("/api/menu")
 def update_menu(dishes: List[dict], request: Request, db: Session = Depends(get_db)):
     current_admin = require_admin_api(request, db)
+    modified_names = []
     for d in dishes:
         dish = db.query(Dish).filter(Dish.id == d["id"]).first()
         if dish:
+            if "name" in d and str(d["name"] or "").strip():
+                new_name = str(d["name"]).strip()
+                if new_name.casefold() != dish.name.casefold():
+                    dup = db.query(Dish).filter(func.lower(Dish.name) == new_name.casefold(), Dish.id != dish.id).first()
+                    if dup:
+                        raise HTTPException(status_code=409, detail=f"Another menu item named '{new_name}' already exists")
+                dish.name = new_name
             dish.available = d.get("available", dish.available)
-            if "alias" in d:
-                dish.alias = str(d.get("alias") or "").strip()
             if "price" in d:
                 price_str = str(d["price"]).strip()
                 try:
                     p = float(price_str)
                 except (TypeError, ValueError):
-                    raise HTTPException(status_code=400, detail=f"Invalid price for dish '{dish.name}'")
+                    raise HTTPException(status_code=400, detail=f"Invalid price for menu item '{dish.name}'")
                 if p < 0.10 or p > 10000:
-                    raise HTTPException(status_code=400, detail=f"Price must be at least RM 0.10 and cannot exceed RM 10,000 for dish '{dish.name}'")
+                    raise HTTPException(status_code=400, detail=f"Price must be at least RM 0.10 and cannot exceed RM 10,000 for '{dish.name}'")
                 if not re.match(r"^\d+(\.\d{1,2})?$", price_str) and round(p, 2) != round(p, 4):
-                    raise HTTPException(status_code=400, detail=f"Price can have at most 2 decimal places for dish '{dish.name}'")
+                    raise HTTPException(status_code=400, detail=f"Price can have at most 2 decimal places for '{dish.name}'")
                 dish.price = round(p, 2)
             if "description" in d:
                 dish.description = _clean_description(d.get("description"))
-            if "pieces_per_portion" in d:
-                dish.pieces_per_portion = _clean_pieces(d.get("pieces_per_portion"))
+            if "categories" in d:
+                cleaned_cats = _clean_categories(d.get("categories"), db=db, auto_create=True)
+                dish.categories = json.dumps(cleaned_cats)
+            if "image_url" in d and str(d.get("image_url") or "").strip().startswith("http"):
+                dish.image_key = str(d.get("image_url")).strip()
+            modified_names.append(dish.name)
+    summary_names = ", ".join(modified_names[:5]) + ("..." if len(modified_names) > 5 else "")
     db.add(AuditLog(
         cashier_id=current_admin.id,
         admin_username=current_admin.username,
         action="MENU_UPDATE",
-        details=f"Admin '{current_admin.username}' updated menu ({len(dishes)} item(s) modified)"
+        details=f"Admin '{current_admin.username}' updated {len(modified_names)} menu item(s): {summary_names}"
     ))
     db.commit()
     return {"status": "updated"}
@@ -1341,7 +1742,7 @@ def add_menu_item(payload: dict, request: Request, db: Session = Depends(get_db)
     current_admin = require_admin_api(request, db)
     name = str(payload.get("name") or "").strip()
     if not name:
-        raise HTTPException(status_code=400, detail="Dish name is required")
+        raise HTTPException(status_code=400, detail="Menu item name is required")
     price_str = str(payload.get("price") or "").strip()
     try:
         price = float(price_str)
@@ -1353,24 +1754,31 @@ def add_menu_item(payload: dict, request: Request, db: Session = Depends(get_db)
         raise HTTPException(status_code=400, detail="Price can have at most 2 decimal places")
     existing = db.query(Dish).filter(func.lower(Dish.name) == name.casefold()).first()
     if existing:
-        raise HTTPException(status_code=409, detail="A dish with this name already exists")
+        raise HTTPException(status_code=409, detail="A menu item with this name already exists")
     unit = str(payload.get("unit") or "portion").strip() or "portion"
-    alias = str(payload.get("alias") or "").strip()
+    cleaned_cats = _clean_categories(payload.get("categories"), db=db, auto_create=True)
+    image_key = str(payload.get("image_url") or payload.get("image_key") or "").strip()
+    max_sort = db.query(func.max(Dish.sort_order)).scalar()
+    next_sort = (int(max_sort) + 1) if max_sort is not None else 1
     dish = Dish(
         name=name,
-        alias=alias,
+        alias="",
         price=round(price, 2),
         available=bool(payload.get("available", True)),
         unit=unit,
         description=_clean_description(payload.get("description")),
-        pieces_per_portion=_clean_pieces(payload.get("pieces_per_portion")),
+        pieces_per_portion=1,
+        categories=json.dumps(cleaned_cats),
+        image_key=image_key,
+        sort_order=next_sort,
     )
     db.add(dish)
+    cat_info = f" [Categories: {', '.join(cleaned_cats)}]" if cleaned_cats else ""
     db.add(AuditLog(
         cashier_id=current_admin.id,
         admin_username=current_admin.username,
         action="MENU_ADD",
-        details=f"Admin '{current_admin.username}' added dish '{dish.name}' (RM {dish.price:.2f})"
+        details=f"Admin '{current_admin.username}' added menu item '{dish.name}' (RM {dish.price:.2f}){cat_info}"
     ))
     db.commit()
     db.refresh(dish)
@@ -1381,42 +1789,61 @@ def delete_menu_item(dish_id: int, request: Request, db: Session = Depends(get_d
     current_admin = require_admin_api(request, db)
     dish = db.query(Dish).filter(Dish.id == dish_id).first()
     if not dish:
-        raise HTTPException(status_code=404, detail="Dish not found")
+        raise HTTPException(status_code=404, detail="Menu item not found")
     d_name = dish.name
+    old_key = (getattr(dish, "image_key", "") or "").strip()
+    if old_key and not old_key.startswith("http"):
+        old_file = MENU_UPLOAD_DIR / Path(old_key).name
+        try:
+            if old_file.is_file():
+                old_file.unlink()
+        except OSError:
+            pass
     db.delete(dish)
     db.add(AuditLog(
         cashier_id=current_admin.id,
         admin_username=current_admin.username,
         action="MENU_DELETE",
-        details=f"Admin '{current_admin.username}' deleted dish '{d_name}'"
+        details=f"Admin '{current_admin.username}' deleted menu item '{d_name}'"
     ))
     db.commit()
     return {"status": "deleted", "id": dish_id}
 
 @app.get("/api/admin/menu/export")
 def export_admin_menu_csv(request: Request, db: Session = Depends(get_db)):
-    require_admin_api(request, db)
-    dishes = db.query(Dish).order_by(Dish.name.asc()).all()
+    current_admin = require_admin_api(request, db)
+    dishes = db.query(Dish).order_by(Dish.sort_order.asc(), Dish.id.asc()).all()
 
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["Name", "Alias", "Price", "Pieces", "Available", "Description"])
+    writer.writerow(["Name", "Price", "Categories", "Available", "Description", "Photo"])
     for d in dishes:
         p_val = f"{d.price:.2f}" if d.price is not None else "0.00"
         avail_str = "Yes" if d.available else "No"
-        pieces_val = d.pieces_per_portion if d.pieces_per_portion is not None else 1
+        cats_str = "; ".join(_parse_dish_categories(getattr(d, "categories", "[]")))
         writer.writerow([
             d.name or "",
-            d.alias or "",
             p_val,
-            pieces_val,
+            cats_str,
             avail_str,
             d.description or "",
+            getattr(d, "image_key", "") or "",
         ])
+
+    try:
+        db.add(AuditLog(
+            cashier_id=current_admin.id,
+            admin_username=current_admin.username,
+            action="MENU_EXPORT",
+            details=f"Admin '{current_admin.username}' exported menu CSV ({len(dishes)} item(s))"
+        ))
+        db.commit()
+    except Exception:
+        pass
 
     csv_bytes = ("\ufeff" + buf.getvalue()).encode("utf-8")
     date_tag = (datetime.utcnow() + _local_tz_offset()).strftime("%Y%m%d_%H%M%S")
-    filename = f"afrc-menu-{date_tag}.csv"
+    filename = f"kiosk-menu-{date_tag}.csv"
     return Response(
         content=csv_bytes,
         media_type="text/csv; charset=utf-8",
@@ -1469,24 +1896,30 @@ async def import_admin_menu_csv(
 
     col_map = {}
     for idx, h in enumerate(normalized_headers):
-        if h in ("name", "dish name", "dish", "ai dish name", "item", "item name") and "name" not in col_map:
+        if h in ("name", "dish name", "dish", "menu name", "item", "item name") and "name" not in col_map:
             col_map["name"] = idx
-        elif h in ("alias", "customer alias", "display name") and "alias" not in col_map:
-            col_map["alias"] = idx
         elif h in ("price", "price (rm)", "price rm", "rm", "cost") and "price" not in col_map:
             col_map["price"] = idx
-        elif h in ("pieces", "piece", "pieces per portion", "pieces / portion", "portion", "qty", "count") and "pieces" not in col_map:
-            col_map["pieces"] = idx
+        elif h in ("categories", "category", "tags", "tag") and "categories" not in col_map:
+            col_map["categories"] = idx
         elif h in ("available", "available today", "is available", "active", "status", "enabled") and "available" not in col_map:
             col_map["available"] = idx
-        elif h in ("description", "desc", "ai description", "visual description", "ai visual description") and "description" not in col_map:
+        elif h in ("description", "desc") and "description" not in col_map:
             col_map["description"] = idx
+        elif h in ("photo", "image", "image_url", "image_key", "photo url") and "photo" not in col_map:
+            col_map["photo"] = idx
 
     if "name" not in col_map:
         raise HTTPException(
             status_code=400,
-            detail="CSV is missing the 'Name' column header. Required column: Name (optional: Alias, Price, Pieces, Available, Description)."
+            detail="CSV is missing the 'Name' column header. Required column: Name (optional: Price, Categories, Available, Description, Photo)."
         )
+
+    existing_photos = {
+        d.name.casefold(): (getattr(d, "image_key", "") or "")
+        for d in db.query(Dish).all()
+        if d.name
+    }
 
     new_dishes = []
     seen_names = set()
@@ -1503,14 +1936,12 @@ async def import_admin_menu_csv(
 
         name = get_val("name")
         if not name:
-            raise HTTPException(status_code=400, detail=f"Row {row_idx}: Dish Name cannot be empty")
+            raise HTTPException(status_code=400, detail=f"Row {row_idx}: Menu Name cannot be empty")
 
         name_lower = name.casefold()
         if name_lower in seen_names:
-            raise HTTPException(status_code=400, detail=f"Row {row_idx}: Duplicate dish name '{name}' found in CSV")
+            raise HTTPException(status_code=400, detail=f"Row {row_idx}: Duplicate menu item name '{name}' found in CSV")
         seen_names.add(name_lower)
-
-        alias = get_val("alias")
 
         price_raw = get_val("price", "0")
         price_clean = re.sub(r"[^0-9.]", "", price_raw.replace(",", "."))
@@ -1522,15 +1953,11 @@ async def import_admin_menu_csv(
         if price_val < 0.10 or price_val > 10000:
             raise HTTPException(status_code=400, detail=f"Row {row_idx} ('{name}'): Price must be between RM 0.10 and RM 10,000")
 
-        pieces_raw = get_val("pieces", "1")
+        cats_raw = get_val("categories", "")
         try:
-            pieces_val = int(re.sub(r"[^0-9]", "", pieces_raw)) if pieces_raw else 1
-            if pieces_val < 1:
-                pieces_val = 1
-            elif pieces_val > 100:
-                pieces_val = 100
-        except ValueError:
-            pieces_val = 1
+            cleaned_cats = _clean_categories(cats_raw, db=db, auto_create=True)
+        except HTTPException as e:
+            raise HTTPException(status_code=400, detail=f"Row {row_idx} ('{name}'): {e.detail}")
 
         avail_raw = get_val("available", "true").lower()
         if avail_raw in ("false", "no", "0", "n", "f", "unavailable", "off", "disable", "disabled"):
@@ -1542,14 +1969,18 @@ async def import_admin_menu_csv(
         if len(desc_raw) > 500:
             desc_raw = desc_raw[:500]
 
+        photo_raw = get_val("photo") or existing_photos.get(name_lower, "")
+
         dish = Dish(
             name=name,
-            alias=alias,
+            alias="",
             price=round(price_val, 2),
             available=avail_val,
             unit="portion",
             description=desc_raw,
-            pieces_per_portion=pieces_val,
+            pieces_per_portion=1,
+            categories=json.dumps(cleaned_cats),
+            image_key=photo_raw,
         )
         new_dishes.append(dish)
 
@@ -1640,6 +2071,140 @@ def get_client_state(
         resp.set_cookie("afrc_active_session", active_bill.id, max_age=3600, path="/", samesite="lax")
     else:
         resp.delete_cookie("afrc_active_session", path="/")
+    return resp
+
+@app.post("/api/checkout")
+def manual_checkout(
+    payload: dict,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    settings = _restaurant_settings()
+    if settings["maintenance_mode"]:
+        raise HTTPException(
+            status_code=503,
+            detail="System is currently under maintenance. Please try again later."
+        )
+    if settings["coming_soon"]:
+        raise HTTPException(
+            status_code=503,
+            detail="System is not yet launched. Coming soon!"
+        )
+    if not settings["is_open"]:
+        op_text = settings["operation_hour_text"]
+        raise HTTPException(
+            status_code=403,
+            detail=f"You are outside our operation hour. Our operation hour is {op_text} please comeback later."
+        )
+
+    _expire_stale_bills(db)
+
+    c_token = _get_client_token(request, str(payload.get("client_token") or ""))
+    d_id = _get_device_id(request, explicit_device=str(payload.get("device_id") or ""), explicit_client=c_token)
+    edit_sid = str(payload.get("session_id") or payload.get("edit_session_id") or "").strip()
+    b_sid = _get_scan_session_id(request, explicit_session=str(payload.get("browser_session_id") or edit_sid))
+
+    existing_open = _find_active_bill(request, db, session_id=edit_sid, explicit_token=c_token)
+    target_bill = existing_open
+
+    req_items = payload.get("items") or []
+    if not isinstance(req_items, list) or not req_items:
+        raise HTTPException(status_code=400, detail="Your cart is empty. Please add at least one item.")
+
+    dishes = db.query(Dish).filter(Dish.available == True).all()
+    dish_by_id = {d.id: d for d in dishes}
+    dish_by_name = {d.name.casefold(): d for d in dishes if d.name}
+
+    aggregated: dict[int, int] = {}
+    order_ids: list[int] = []
+    for raw_item in req_items:
+        if not isinstance(raw_item, dict):
+            continue
+        dish = None
+        raw_id = raw_item.get("id")
+        if raw_id is not None:
+            try:
+                dish = dish_by_id.get(int(raw_id))
+            except (TypeError, ValueError):
+                dish = None
+        if dish is None and raw_item.get("name"):
+            dish = dish_by_name.get(str(raw_item.get("name")).strip().casefold())
+        if not dish:
+            continue
+        try:
+            qty = int(round(float(raw_item.get("quantity") or 0)))
+        except (TypeError, ValueError):
+            qty = 0
+        if qty < 1:
+            continue
+        if dish.id not in aggregated:
+            order_ids.append(dish.id)
+            aggregated[dish.id] = 0
+        aggregated[dish.id] += qty
+
+    bill_items = []
+    total = 0.0
+    for did in order_ids:
+        dish = dish_by_id[did]
+        qty = aggregated[did]
+        unit_price = round(float(dish.price or 0.0), 2)
+        sub = round(unit_price * qty, 2)
+        total += sub
+        bill_items.append(BillItem(
+            name=dish.name,
+            quantity=qty,
+            unit_price=unit_price,
+            subtotal=sub,
+            piece_count=None,
+        ))
+
+    if not bill_items:
+        raise HTTPException(status_code=400, detail="Selected items are currently unavailable. Please refresh the menu.")
+
+    if round(total, 2) < 0.10:
+        raise HTTPException(status_code=400, detail="Order total must be at least RM 0.10.")
+
+    items_json = json.dumps([b.dict() for b in bill_items])
+    if target_bill:
+        session_id = target_bill.id
+        bill_number = target_bill.bill_number or next_bill_number(db)
+        target_bill.bill_number = bill_number
+        target_bill.raw_ai = items_json
+        target_bill.final_bill = items_json
+        target_bill.status = "open"
+        target_bill.curlec_order_id = ""
+        target_bill.updated_at = datetime.utcnow()
+        if c_token:
+            target_bill.client_token = c_token
+        db.commit()
+    else:
+        session_id = str(uuid.uuid4())
+        bill_number = next_bill_number(db)
+        session = SessionBill(
+            id=session_id,
+            bill_number=bill_number,
+            image_key="",
+            raw_ai=items_json,
+            final_bill=items_json,
+            retake_count=0,
+            client_token=c_token,
+            updated_at=datetime.utcnow(),
+        )
+        db.add(session)
+        db.commit()
+
+    payload_resp = BillResponse(
+        items=bill_items,
+        total=round(total, 2),
+        session_id=session_id,
+        bill_number=bill_number,
+    ).dict()
+    resp = JSONResponse(content=payload_resp, headers=NO_CACHE_HEADERS)
+    resp.set_cookie("afrc_client_id", c_token, max_age=86400 * 30, path="/", samesite="lax")
+    resp.set_cookie("afrc_device_id", d_id, max_age=86400 * 365, path="/", samesite="lax")
+    if b_sid:
+        resp.set_cookie("afrc_browser_session", b_sid, max_age=86400, path="/", samesite="lax")
+    resp.set_cookie("afrc_active_session", session_id, max_age=3600, path="/", samesite="lax")
     return resp
 
 @app.post("/api/recognize")
@@ -1999,7 +2564,7 @@ def _bill_payload(session: SessionBill, refunded_amount: float = 0.0, is_owner_o
         "created_at": (session.created_at.isoformat() + "Z") if session.created_at else "",
         "updated_at": (session.updated_at.isoformat() + "Z") if session.updated_at else "",
         "paid_at": (session.paid_at.isoformat() + "Z") if session.paid_at else "",
-        "has_image": has_r2 or img_path.is_file(),
+        "has_image": False,
     }
 
 @app.get("/api/sessions/{session_id}")
@@ -2027,6 +2592,7 @@ def get_session(session_id: str, request: Request, db: Session = Depends(get_db)
         resp.delete_cookie("afrc_active_session", path="/")
     return resp
 
+@app.post("/api/sessions/{session_id}/start-edit")
 @app.post("/api/sessions/{session_id}/start-retake")
 def start_retake(session_id: str, request: Request, payload: dict = None, db: Session = Depends(get_db)):
     _expire_stale_bills(db)
@@ -2131,90 +2697,6 @@ async def get_session_image(session_id: str, request: Request, db: Session = Dep
             )
     _R2_MISSING_UNTIL[meta["id"]] = now_mono + _R2_MISSING_TTL_SEC
     raise HTTPException(status_code=404, detail="Image not found")
-
-@app.post("/api/sessions/{session_id}/need-cashier")
-def need_cashier(session_id: str, request: Request, db: Session = Depends(get_db)):
-    bill = db.query(SessionBill).filter(SessionBill.id == session_id).first()
-    if not bill:
-        raise HTTPException(status_code=404, detail="Bill not found")
-    if bill.status == "paid":
-        raise HTTPException(status_code=409, detail="This bill is already paid")
-    _verify_bill_ownership(bill, request, db)
-    bill.status = "void"
-    bill.void_reason = "Needed Cashier Assistance"
-    bill.updated_at = datetime.utcnow()
-    db.commit()
-    resp = JSONResponse(
-        content={
-            "status": "void",
-            "void_reason": bill.void_reason,
-            "bill_number": bill.bill_number,
-            "message": f"Bill #{bill.bill_number} has been voided. Please head to the cashier counter for assistance.",
-        },
-        headers=NO_CACHE_HEADERS,
-    )
-    resp.delete_cookie("afrc_active_session", path="/")
-    return resp
-
-@app.post("/api/sessions/{session_id}/cancel")
-def cancel_bill(session_id: str, request: Request, db: Session = Depends(get_db)):
-    bill = db.query(SessionBill).filter(SessionBill.id == session_id).first()
-    if not bill:
-        raise HTTPException(status_code=404, detail="Bill not found")
-    if bill.status == "paid":
-        raise HTTPException(status_code=409, detail="This bill is already paid")
-    _verify_bill_ownership(bill, request, db)
-    bill.status = "void"
-    bill.void_reason = "Customer Cancelled"
-    bill.updated_at = datetime.utcnow()
-    db.commit()
-    resp = JSONResponse(
-        content={
-            "status": "void",
-            "void_reason": bill.void_reason,
-            "bill_number": bill.bill_number,
-            "message": f"Bill #{bill.bill_number} has been cancelled and voided.",
-        },
-        headers=NO_CACHE_HEADERS,
-    )
-    resp.delete_cookie("afrc_active_session", path="/")
-    return resp
-
-@app.post("/api/sessions/{session_id}/void-retake")
-def void_retake(session_id: str, request: Request, payload: dict = None, db: Session = Depends(get_db)):
-    bill = db.query(SessionBill).filter(SessionBill.id == session_id).first()
-    if not bill:
-        raise HTTPException(status_code=404, detail="Bill not found")
-    if bill.status == "paid":
-        raise HTTPException(status_code=409, detail="This bill is already paid")
-    _verify_bill_ownership(bill, request, db, (payload or {}).get("client_token", ""))
-    cfg = _rate_limit_config()
-    body = payload or {}
-    c_token = _get_client_token(request, body.get("client_token", "")) or bill.client_token or ""
-    d_id = _get_device_id(request, explicit_device=body.get("device_id", ""), explicit_client=c_token)
-    bill.status = "void"
-    bill.void_reason = f"Exceeded {cfg['max_retakes']} Retries Limit"
-    bill.updated_at = datetime.utcnow()
-    db.commit()
-    _set_cooldown(
-        request,
-        c_token,
-        db,
-        session_id=session_id,
-        device_id=d_id,
-        reason=f"Exceeded {cfg['max_retakes']} photo retries limit.",
-    )
-    resp = JSONResponse(
-        content={
-            "status": "void",
-            "void_reason": bill.void_reason,
-            "cooldown_minutes": cfg["cooldown_minutes"],
-            "message": f"Your rate limit hit, try again after {cfg['cooldown_minutes']}min.",
-        },
-        headers=NO_CACHE_HEADERS,
-    )
-    resp.delete_cookie("afrc_active_session", path="/")
-    return resp
 
 def _build_maps_embed_url(maps_url: str, rest_name: str) -> str:
     url = (maps_url or "").strip()
@@ -2383,9 +2865,10 @@ def _save_restaurant_settings(updates: dict) -> dict:
 
 
 def _curlec_client():
-    key_id = os.getenv("CURLEC_KEY_ID", "").strip()
-    key_secret = os.getenv("CURLEC_KEY_SECRET", "").strip()
-    if not key_id or not key_secret:
+    c_env = _read_env_file_cached(ENV_DIR / "curlec.env") or _read_env_file_cached(ROOT / "curlec.env")
+    key_id = (c_env.get("CURLEC_KEY_ID") or os.getenv("CURLEC_KEY_ID", "")).strip()
+    key_secret = (c_env.get("CURLEC_KEY_SECRET") or os.getenv("CURLEC_KEY_SECRET", "")).strip()
+    if not key_id or not key_secret or key_id == "your-curlec-key-id":
         raise HTTPException(status_code=503, detail="Payment gateway is not configured")
     return razorpay.Client(auth=(key_id, key_secret)), key_id
 
@@ -2400,6 +2883,7 @@ def _checkout_payload(bill: SessionBill, key_id: str) -> dict:
         "amount": _amount_sen(bill),
         "currency": "MYR",
         "session_id": bill.id,
+        "bill_number": bill.bill_number or "",
         "restaurant_name": prof["restaurant_name"],
         "company_name": prof["company_name"],
         "company_phone": prof["company_phone"],
@@ -2414,7 +2898,7 @@ def _create_curlec_order(bill: SessionBill, db: Session) -> dict:
             status_code=400,
             detail=f"Payment amount (RM {amount / 100:.2f}) is below the minimum allowed payment of RM 0.10. Please adjust dish price or items.",
         )
-    if bill.curlec_order_id and bill.status == "pending":
+    if bill.curlec_order_id and bill.status in ("open", "pending"):
         try:
             existing = client.order.fetch(bill.curlec_order_id)
         except Exception:
@@ -2443,7 +2927,7 @@ def _create_curlec_order(bill: SessionBill, db: Session) -> dict:
             )
         raise HTTPException(status_code=502, detail=f"Could not start the payment: {err_str[:120]}")
     bill.curlec_order_id = order["id"]
-    bill.status = "pending"
+    bill.status = "open"
     db.commit()
     return _checkout_payload(bill, key_id)
 
@@ -2508,33 +2992,30 @@ def _normalize_my_phone(raw_phone: str) -> str:
 
 @app.post("/api/pay")
 def pay(payload: dict, request: Request, db: Session = Depends(get_db)):
-    _require_turnstile(str(payload.get("cf-turnstile-response") or ""), "pay", request)
     _expire_stale_bills(db)
     session_id = str(payload.get("session_id") or "").strip()
     bill = db.query(SessionBill).filter(SessionBill.id == session_id).first()
     if not bill:
         raise HTTPException(status_code=404, detail="Bill not found")
-    if bill.status in ("void", "cancelled"):
-        raise HTTPException(status_code=409, detail="This bill has been voided. Please pay at the counter.")
-    if bill.status == "needs_cashier":
-        raise HTTPException(status_code=409, detail="A cashier is checking this bill")
     _verify_bill_ownership(bill, request, db, (payload or {}).get("client_token", ""))
     if bill.status == "paid":
-        return {"status": "paid", "session_id": bill.id}
-    phone = _normalize_my_phone(payload.get("phone") or "")
+        return {"status": "paid", "session_id": bill.id, "bill_number": bill.bill_number}
+    raw_phone = str(payload.get("phone") or "").strip()
+    if raw_phone:
+        bill.receipt_phone = _normalize_my_phone(raw_phone)
     email = str(payload.get("email") or "").strip()
     if email:
         if email[0] in ("=", "+", "-", "@"):
             raise HTTPException(status_code=400, detail="Invalid email format")
-        import re
         if not re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", email) or len(email) > 100:
             raise HTTPException(status_code=400, detail="Enter a valid email address or leave it blank")
-    bill.receipt_phone = phone
-    bill.receipt_email = email
+        bill.receipt_email = email
+    bill.status = "open"
+    bill.void_reason = ""
     bill.updated_at = datetime.utcnow()
     db.commit()
     checkout = _create_curlec_order(bill, db)
-    checkout["status"] = "pending"
+    checkout["status"] = "open"
     return checkout
 
 @app.post("/api/pay/confirm")
@@ -2546,24 +3027,34 @@ def pay_confirm(payload: dict, db: Session = Depends(get_db)):
         db,
     )
     if state != "paid" or not bill:
+        if bill and bill.status != "paid":
+            bill.status = "open"
+            db.commit()
         raise HTTPException(status_code=402, detail="Payment was not completed")
-    return {"status": "paid", "session_id": bill.id}
+    return {"status": "paid", "session_id": bill.id, "bill_number": bill.bill_number}
 
-@app.post("/api/pay/callback")
+@app.api_route("/api/pay/callback", methods=["GET", "POST"])
 async def pay_callback(request: Request, db: Session = Depends(get_db)):
-    form = await request.form()
+    if request.method == "POST":
+        form = await request.form()
+    else:
+        form = request.query_params
     bill, state = _verify_and_capture(
         form.get("razorpay_order_id"),
         form.get("razorpay_payment_id"),
         form.get("razorpay_signature"),
         db,
     )
-    session_id = bill.id if bill else ""
+    session_id = (bill.id if bill else "") or str(request.query_params.get("session") or "").strip()
     if state == "paid" and session_id:
         return RedirectResponse(f"/payment/success?session={quote(session_id)}", status_code=303)
-    target = "/pay?payment=failed"
+    if bill and bill.status != "paid":
+        bill.status = "open"
+        bill.void_reason = ""
+        db.commit()
+    target = "/?payment=failed"
     if session_id:
-        target = f"/pay?session={quote(session_id)}&payment=failed"
+        target = f"/?session={quote(session_id)}&payment=failed"
     return RedirectResponse(target, status_code=303)
 
 @app.post("/api/curlec/webhook")
@@ -3248,16 +3739,13 @@ def export_admin_sales_csv(
     writer.writerow([f"Period Paid Bills - {analytics['period_label']}", pt["paid_count"]])
     writer.writerow([f"Period Voided Bills - {analytics['period_label']}", pt["void_count"]])
     writer.writerow([f"Period Voided Value - {analytics['period_label']} (RM)", f"{pt['void_value']:.2f}"])
-    writer.writerow([f"Period Scanned Images - {analytics['period_label']}", pt.get("scan_count", 0)])
-    writer.writerow(["Today's Scanned Images", summary.get("today_scans", 0)])
-    writer.writerow(["All-Time Scanned Images", summary.get("total_scans", 0)])
     writer.writerow(["All-Time Revenue (RM)", f"{summary['all_time_revenue']:.2f}"])
     writer.writerow(["All-Time Total Bills", summary["total_bills"]])
     writer.writerow([])
 
     writer.writerow(["SALES TIMELINE BREAKDOWN"])
     time_col = "Hour" if analytics["granularity"] == "hour" else ("Month" if analytics["granularity"] == "month" else ("Quarter" if analytics["granularity"] == "quarter" else "Date"))
-    writer.writerow([time_col, "Paid Revenue (RM)", "Paid Bills", "Pending Bills", "Voided Bills", "Total Bills", "Scanned Images"])
+    writer.writerow([time_col, "Paid Revenue (RM)", "Paid Bills", "Pending Bills", "Voided Bills", "Total Bills"])
     for row in analytics["series"]:
         writer.writerow([
             row["label"] if analytics["granularity"] == "hour" else row["key"],
@@ -3266,7 +3754,6 @@ def export_admin_sales_csv(
             row["open_count"],
             row["void_count"],
             row["total_count"],
-            row.get("scan_count", 0),
         ])
     writer.writerow([])
 
@@ -3313,22 +3800,17 @@ def export_admin_sales_csv(
 
 @app.post("/api/admin/bills/{session_id}/status")
 def update_admin_bill_status(session_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
-    require_admin_api(request, db)
+    current_admin = require_admin_api(request, db)
     bill = db.query(SessionBill).filter(SessionBill.id == session_id).first()
     if not bill:
         raise HTTPException(status_code=404, detail="Bill not found")
     new_status = str(payload.get("status") or "").strip().lower()
-    if new_status not in ("open", "pending", "paid", "needs_cashier", "void", "cancelled"):
-        raise HTTPException(status_code=400, detail="Invalid status")
-    if new_status in ("needs_cashier", "cancelled"):
-        bill.status = "void"
-        bill.void_reason = (
-            "Needed Cashier Assistance" if new_status == "needs_cashier" else "Customer Cancelled"
-        )
-    else:
-        bill.status = new_status
-        if new_status == "void":
-            bill.void_reason = str(payload.get("void_reason") or "").strip() or bill.void_reason or "Voided by Admin"
+    if new_status in ("pending", "open"):
+        new_status = "open"
+    elif new_status != "paid":
+        raise HTTPException(status_code=400, detail="Bill status can only be 'open' or 'paid'")
+    bill.status = new_status
+    bill.void_reason = ""
     bill.updated_at = datetime.utcnow()
     if bill.status == "paid" and not bill.paid_at:
         bill.paid_at = datetime.utcnow()
@@ -3422,12 +3904,8 @@ def _build_refund_info(bill: SessionBill, db: Session, sync_curlec_contact: bool
         "receipt_phone": base["receipt_phone"],
         "curlec_order_id": base["curlec_order_id"],
         "curlec_payment_id": base["curlec_payment_id"],
-        "has_image": base["has_image"],
-        "image_url": (
-            f"/api/sessions/{quote(bill.id)}/image?v={int(bill.retake_count or 0)}"
-            if base["has_image"]
-            else ""
-        ),
+        "has_image": False,
+        "image_url": "",
         "refunded_amount": round(refunded_total, 2),
         "remaining_refundable": remaining_refundable,
         "items": item_rows,
@@ -3940,9 +4418,6 @@ def get_admin_feedbacks(request: Request, db: Session = Depends(get_db)):
         image_url = ""
         bill_total = 0.0
         if bill:
-            has_image = bool(bill.image_key or (UPLOAD_DIR / f"{bill.id}.jpg").is_file())
-            if has_image or bill.id:
-                image_url = f"/api/sessions/{bill.id}/image"
             try:
                 items = json.loads(bill.final_bill or "[]")
                 bill_total = round(sum(float(it.get("subtotal") or 0) for it in items), 2)
