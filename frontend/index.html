@@ -902,9 +902,19 @@
               device_id: dId,
             }),
           });
-          const payData = await payRes.json().catch(() => ({}));
+          let payData = {};
+          try {
+            payData = await payRes.json();
+          } catch (e) {
+            payData = {};
+          }
           if (!payRes.ok) {
-            const pErr = (typeof payData.detail === "string" ? payData.detail : payData.detail?.message) || "Payment could not be started. Please check your order and try again.";
+            let pErr = (typeof payData.detail === "string" ? payData.detail : payData.detail?.message) || "";
+            if (!pErr) {
+              if (payRes.status === 503) pErr = "Payment gateway is not configured. Please configure Curlec credentials.";
+              else if (payRes.status === 403) pErr = "We are currently outside operating hours.";
+              else pErr = `Payment could not be started (HTTP ${payRes.status}). Please try again.`;
+            }
             showCheckoutError(pErr);
             isSubmittingOrder = false;
             renderCart();
@@ -973,7 +983,9 @@
           });
           checkout.open();
         } catch (err) {
-          showCheckoutError("Network error while starting payment. Please tap Pay Now to retry.");
+          console.error("Payment initiation error:", err);
+          const msg = (err && err.message) ? err.message : "Payment connection could not be established. Please try again.";
+          showCheckoutError(msg);
           isSubmittingOrder = false;
           renderCart();
         }
