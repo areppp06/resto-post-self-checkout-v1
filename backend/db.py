@@ -149,6 +149,18 @@ class FailedScan(Base):
     raw_ai_response = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
+class CheckoutIntent(Base):
+    __tablename__ = "checkout_intents"
+    id = Column(String(64), primary_key=True)
+    curlec_order_id = Column(String(64), unique=True, index=True)
+    items_json = Column(Text, nullable=False)
+    total_amount = Column(Float, nullable=False)
+    client_token = Column(String(128), default="")
+    device_id = Column(String(128), default="")
+    receipt_phone = Column(String(32), default="")
+    receipt_email = Column(String(128), default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class BillRefund(Base):
     __tablename__ = "bill_refunds"
     id = Column(Integer, primary_key=True, index=True)
@@ -256,8 +268,7 @@ def init_db():
         if cooldown_columns and "reason" not in cooldown_columns:
             conn.exec_driver_sql("ALTER TABLE client_cooldowns ADD COLUMN reason TEXT DEFAULT ''")
         conn.exec_driver_sql(
-            "UPDATE sessions SET status = 'open', void_reason = '' "
-            "WHERE status != 'paid'"
+            "DELETE FROM sessions WHERE status != 'paid'"
         )
     db = SessionLocal()
     # Backfill bill_number for any existing sessions missing one

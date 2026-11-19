@@ -27,7 +27,7 @@ from pathlib import Path
 from urllib.parse import quote
 from dotenv import dotenv_values
 
-from .db import ROOT, ENV_DIR, SessionLocal, init_db, Category, Dish, Cashier, AuditLog, SessionBill, ClientCooldown, ScanAttempt, FailedScan, BillRefund, Feedback, AdminUser, AdminSession, next_bill_number
+from .db import ROOT, ENV_DIR, SessionLocal, init_db, Category, Dish, Cashier, AuditLog, SessionBill, CheckoutIntent, ClientCooldown, ScanAttempt, FailedScan, BillRefund, Feedback, AdminUser, AdminSession, next_bill_number
 from .auth import hash_password, verify_password, create_admin_session, get_current_admin, require_admin_api, revoke_session, SESSION_COOKIE_NAME, SESSION_DURATION_DAYS, get_or_create_setup_token, burn_setup_token
 from .schemas import Dish as DishSchema, BillResponse, BillItem, ErrorResponse
 from .ai_service import recognize_food, RecognitionError
@@ -2097,114 +2097,25 @@ def manual_checkout(
             detail=f"You are outside our operation hour. Our operation hour is {op_text} please comeback later."
         )
 
-    _expire_stale_bills(db)
+    req_items = (payload or {}).get("items") or []
+    bill_items, total = _normalize_order_items(req_items, db)
 
     c_token = _get_client_token(request, str(payload.get("client_token") or ""))
     d_id = _get_device_id(request, explicit_device=str(payload.get("device_id") or ""), explicit_client=c_token)
-    edit_sid = str(payload.get("session_id") or payload.get("edit_session_id") or "").strip()
-    b_sid = _get_scan_session_id(request, explicit_session=str(payload.get("browser_session_id") or edit_sid))
+    b_sid = _get_scan_session_id(request, explicit_session=str(payload.get("browser_session_id") or ""))
 
-    existing_open = _find_active_bill(request, db, session_id=edit_sid, explicit_token=c_token)
-    target_bill = existing_open
-
-    req_items = payload.get("items") or []
-    if not isinstance(req_items, list) or not req_items:
-        raise HTTPException(status_code=400, detail="Your cart is empty. Please add at least one item.")
-
-    dishes = db.query(Dish).filter(Dish.available == True).all()
-    dish_by_id = {d.id: d for d in dishes}
-    dish_by_name = {d.name.casefold(): d for d in dishes if d.name}
-
-    aggregated: dict[int, int] = {}
-    order_ids: list[int] = []
-    for raw_item in req_items:
-        if not isinstance(raw_item, dict):
-            continue
-        dish = None
-        raw_id = raw_item.get("id")
-        if raw_id is not None:
-            try:
-                dish = dish_by_id.get(int(raw_id))
-            except (TypeError, ValueError):
-                dish = None
-        if dish is None and raw_item.get("name"):
-            dish = dish_by_name.get(str(raw_item.get("name")).strip().casefold())
-        if not dish:
-            continue
-        try:
-            qty = int(round(float(raw_item.get("quantity") or 0)))
-        except (TypeError, ValueError):
-            qty = 0
-        if qty < 1:
-            continue
-        if dish.id not in aggregated:
-            order_ids.append(dish.id)
-            aggregated[dish.id] = 0
-        aggregated[dish.id] += qty
-
-    bill_items = []
-    total = 0.0
-    for did in order_ids:
-        dish = dish_by_id[did]
-        qty = aggregated[did]
-        unit_price = round(float(dish.price or 0.0), 2)
-        sub = round(unit_price * qty, 2)
-        total += sub
-        bill_items.append(BillItem(
-            name=dish.name,
-            quantity=qty,
-            unit_price=unit_price,
-            subtotal=sub,
-            piece_count=None,
-        ))
-
-    if not bill_items:
-        raise HTTPException(status_code=400, detail="Selected items are currently unavailable. Please refresh the menu.")
-
-    if round(total, 2) < 0.10:
-        raise HTTPException(status_code=400, detail="Order total must be at least RM 0.10.")
-
-    items_json = json.dumps([b.dict() for b in bill_items])
-    if target_bill:
-        session_id = target_bill.id
-        bill_number = target_bill.bill_number or next_bill_number(db)
-        target_bill.bill_number = bill_number
-        target_bill.raw_ai = items_json
-        target_bill.final_bill = items_json
-        target_bill.status = "open"
-        target_bill.curlec_order_id = ""
-        target_bill.updated_at = datetime.utcnow()
-        if c_token:
-            target_bill.client_token = c_token
-        db.commit()
-    else:
-        session_id = str(uuid.uuid4())
-        bill_number = next_bill_number(db)
-        session = SessionBill(
-            id=session_id,
-            bill_number=bill_number,
-            image_key="",
-            raw_ai=items_json,
-            final_bill=items_json,
-            retake_count=0,
-            client_token=c_token,
-            updated_at=datetime.utcnow(),
-        )
-        db.add(session)
-        db.commit()
-
-    payload_resp = BillResponse(
-        items=bill_items,
-        total=round(total, 2),
-        session_id=session_id,
-        bill_number=bill_number,
-    ).dict()
-    resp = JSONResponse(content=payload_resp, headers=NO_CACHE_HEADERS)
+    resp = JSONResponse(
+        content={
+            "ok": True,
+            "items": [b.dict() for b in bill_items],
+            "total": total,
+        },
+        headers=NO_CACHE_HEADERS,
+    )
     resp.set_cookie("afrc_client_id", c_token, max_age=86400 * 30, path="/", samesite="lax")
     resp.set_cookie("afrc_device_id", d_id, max_age=86400 * 365, path="/", samesite="lax")
     if b_sid:
         resp.set_cookie("afrc_browser_session", b_sid, max_age=86400, path="/", samesite="lax")
-    resp.set_cookie("afrc_active_session", session_id, max_age=3600, path="/", samesite="lax")
     return resp
 
 @app.post("/api/recognize")
@@ -2872,107 +2783,148 @@ def _curlec_client():
         raise HTTPException(status_code=503, detail="Payment gateway is not configured")
     return razorpay.Client(auth=(key_id, key_secret)), key_id
 
-def _amount_sen(bill: SessionBill) -> int:
-    return int(round(float(_bill_payload(bill)["total"]) * 100))
+def _normalize_order_items(req_items: list, db: Session) -> tuple[list[BillItem], float]:
+    dishes = db.query(Dish).all()
+    dish_by_id = {d.id: d for d in dishes}
+    dish_by_name = {d.name.strip().casefold(): d for d in dishes}
 
-def _checkout_payload(bill: SessionBill, key_id: str) -> dict:
-    prof = _restaurant_profile()
-    return {
-        "key_id": key_id,
-        "order_id": bill.curlec_order_id,
-        "amount": _amount_sen(bill),
-        "currency": "MYR",
-        "session_id": bill.id,
-        "bill_number": bill.bill_number or "",
-        "restaurant_name": prof["restaurant_name"],
-        "company_name": prof["company_name"],
-        "company_phone": prof["company_phone"],
-        "company_email": prof["company_email"],
-    }
-
-def _create_curlec_order(bill: SessionBill, db: Session) -> dict:
-    client, key_id = _curlec_client()
-    amount = _amount_sen(bill)
-    if amount < 10:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Payment amount (RM {amount / 100:.2f}) is below the minimum allowed payment of RM 0.10. Please adjust dish price or items.",
-        )
-    if bill.curlec_order_id and bill.status in ("open", "pending"):
+    order_ids = []
+    aggregated = {}
+    for raw_item in req_items:
+        if not isinstance(raw_item, dict):
+            continue
+        dish = None
+        raw_id = raw_item.get("id")
+        if raw_id is not None:
+            try:
+                dish = dish_by_id.get(int(raw_id))
+            except (TypeError, ValueError):
+                dish = None
+        if dish is None and raw_item.get("name"):
+            dish = dish_by_name.get(str(raw_item.get("name")).strip().casefold())
+        if not dish:
+            continue
         try:
-            existing = client.order.fetch(bill.curlec_order_id)
-        except Exception:
-            existing = None
-        if (
-            existing
-            and int(existing.get("amount") or 0) == amount
-            and existing.get("currency") == "MYR"
-            and existing.get("status") in ("created", "attempted")
-        ):
-            return _checkout_payload(bill, key_id)
-    try:
-        order = client.order.create({
-            "amount": amount,
-            "currency": "MYR",
-            "receipt": (bill.bill_number or bill.id)[:40],
-            "notes": {"session_id": bill.id, "bill_number": bill.bill_number or ""},
-        })
-    except Exception as e:
-        logger.exception(f"Curlec order creation failed for bill {bill.id} (amount {amount} sen): {e}")
-        err_str = str(e)
-        if "minimum amount" in err_str.lower():
-            raise HTTPException(
-                status_code=400,
-                detail=f"Payment amount (RM {amount / 100:.2f}) is below the minimum allowed payment of RM 0.10.",
-            )
-        raise HTTPException(status_code=502, detail=f"Could not start the payment: {err_str[:120]}")
-    bill.curlec_order_id = order["id"]
-    bill.status = "open"
-    db.commit()
-    return _checkout_payload(bill, key_id)
+            qty = int(round(float(raw_item.get("quantity") or 0)))
+        except (TypeError, ValueError):
+            qty = 0
+        if qty < 1:
+            continue
+        if dish.id not in aggregated:
+            order_ids.append(dish.id)
+            aggregated[dish.id] = 0
+        aggregated[dish.id] += qty
 
-def _record_captured_payment(bill: SessionBill, payment: dict, db: Session) -> bool:
-    if (
-        str(payment.get("status")) != "captured"
-        or str(payment.get("currency")) != "MYR"
-        or int(payment.get("amount") or 0) != _amount_sen(bill)
-        or str(payment.get("order_id") or "") != (bill.curlec_order_id or "")
-    ):
-        return False
-    bill.curlec_payment_id = str(payment.get("id") or "")
-    contact = str(payment.get("contact") or "").strip()
-    if contact:
-        bill.receipt_phone = contact
-    p_email = str(payment.get("email") or "").strip()
-    if p_email and not (bill.receipt_email or "").strip():
-        bill.receipt_email = p_email
-    bill.status = "paid"
-    bill.paid_at = datetime.utcnow()
-    db.commit()
-    return True
+    bill_items = []
+    total = 0.0
+    for did in order_ids:
+        dish = dish_by_id[did]
+        qty = aggregated[did]
+        unit_price = round(float(dish.price or 0.0), 2)
+        sub = round(unit_price * qty, 2)
+        total += sub
+        bill_items.append(BillItem(
+            name=dish.name,
+            quantity=qty,
+            unit_price=unit_price,
+            subtotal=sub,
+            piece_count=None,
+        ))
 
-def _verify_and_capture(order_id: str, payment_id: str, signature: str, db: Session):
+    if not bill_items:
+        raise HTTPException(status_code=400, detail="Cart is empty or items are no longer available.")
+    if round(total, 2) < 0.10:
+        raise HTTPException(status_code=400, detail="Order total must be at least RM 0.10.")
+    return bill_items, round(total, 2)
+
+def _mint_receipt_from_payment(
+    order_id: str,
+    payment_id: str,
+    signature: str,
+    db: Session,
+    bypass_sig: bool = False,
+    payment_entity: dict | None = None,
+) -> tuple[SessionBill | None, str]:
     order_id = str(order_id or "").strip()
     payment_id = str(payment_id or "").strip()
     signature = str(signature or "").strip()
-    bill = db.query(SessionBill).filter(SessionBill.curlec_order_id == order_id).first()
-    if not bill or order_id != (bill.curlec_order_id or ""):
-        return None, "unpaid"
-    if bill.status == "paid":
-        return bill, "paid"
-    client, _key_id = _curlec_client()
-    try:
-        client.utility.verify_payment_signature({
-            "razorpay_order_id": bill.curlec_order_id,
-            "razorpay_payment_id": payment_id,
-            "razorpay_signature": signature,
-        })
-        payment = client.payment.fetch(payment_id)
-    except Exception:
-        return bill, "unpaid"
-    if _record_captured_payment(bill, payment, db):
-        return bill, "paid"
-    return bill, "unpaid"
+
+    # 1. Idempotency: check if official receipt already minted for this payment ID
+    if payment_id:
+        existing = db.query(SessionBill).filter(SessionBill.curlec_payment_id == payment_id).first()
+        if existing:
+            return existing, "paid"
+
+    # 2. Or for this order ID
+    if order_id:
+        existing = db.query(SessionBill).filter(SessionBill.curlec_order_id == order_id).first()
+        if existing:
+            return existing, "paid"
+
+    payment = payment_entity
+    if not bypass_sig:
+        client, _key_id = _curlec_client()
+        try:
+            client.utility.verify_payment_signature({
+                "razorpay_order_id": order_id,
+                "razorpay_payment_id": payment_id,
+                "razorpay_signature": signature,
+            })
+        except Exception as e:
+            logger.warning(f"Signature verification failed for order {order_id}: {e}")
+            return None, "invalid_signature"
+
+        if not payment:
+            try:
+                payment = client.payment.fetch(payment_id)
+            except Exception as e:
+                logger.warning(f"Could not fetch payment {payment_id} from Curlec: {e}")
+                return None, "fetch_failed"
+
+    if not payment:
+        payment = {"status": "captured", "currency": "MYR"}
+
+    if str(payment.get("status")) != "captured" or str(payment.get("currency")) != "MYR":
+        logger.warning(f"Payment {payment_id} status is not captured: {payment.get('status')}")
+        return None, "not_captured"
+
+    intent = db.query(CheckoutIntent).filter(CheckoutIntent.curlec_order_id == order_id).first()
+    if not intent:
+        logger.warning(f"No CheckoutIntent found for order {order_id}")
+        return None, "intent_not_found"
+
+    expected_sen = int(round(intent.total_amount * 100))
+    if int(payment.get("amount") or 0) != expected_sen:
+        logger.warning(f"Payment amount {payment.get('amount')} does not match intent {expected_sen}")
+        return None, "amount_mismatch"
+
+    # ATOMICALLY MINT OFFICIAL RECEIPT NUMBER
+    bill_number = next_bill_number(db)
+    receipt_id = str(uuid.uuid4())
+    phone = intent.receipt_phone or str(payment.get("contact") or "").strip()
+    email = intent.receipt_email or str(payment.get("email") or "").strip()
+
+    bill = SessionBill(
+        id=receipt_id,
+        bill_number=bill_number,
+        raw_ai=intent.items_json,
+        final_bill=intent.items_json,
+        status="paid",
+        receipt_phone=phone,
+        receipt_email=email,
+        curlec_order_id=order_id,
+        curlec_payment_id=payment_id,
+        client_token=intent.client_token,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+        paid_at=datetime.utcnow(),
+    )
+    db.add(bill)
+    db.delete(intent)
+    db.commit()
+
+    logger.info(f"Minted official receipt #{bill_number} (session {receipt_id}) for payment {payment_id}")
+    return bill, "paid"
 
 def _normalize_my_phone(raw_phone: str) -> str:
     raw = str(raw_phone or "").strip()
@@ -2992,45 +2944,92 @@ def _normalize_my_phone(raw_phone: str) -> str:
 
 @app.post("/api/pay")
 def pay(payload: dict, request: Request, db: Session = Depends(get_db)):
-    _expire_stale_bills(db)
-    session_id = str(payload.get("session_id") or "").strip()
-    bill = db.query(SessionBill).filter(SessionBill.id == session_id).first()
-    if not bill:
-        raise HTTPException(status_code=404, detail="Bill not found")
-    _verify_bill_ownership(bill, request, db, (payload or {}).get("client_token", ""))
-    if bill.status == "paid":
-        return {"status": "paid", "session_id": bill.id, "bill_number": bill.bill_number}
-    raw_phone = str(payload.get("phone") or "").strip()
-    if raw_phone:
-        bill.receipt_phone = _normalize_my_phone(raw_phone)
-    email = str(payload.get("email") or "").strip()
+    settings = _restaurant_settings()
+    if settings.get("is_open") is False:
+        hour_text = settings.get("operation_hour_text") or "08:00 - 17:00"
+        raise HTTPException(
+            status_code=403,
+            detail=f"Restaurant is outside operating hours ({hour_text}).",
+        )
+
+    req_items = (payload or {}).get("items") or []
+    if not req_items:
+        raise HTTPException(status_code=400, detail="Cart is empty. Please add items to pay.")
+
+    bill_items, total = _normalize_order_items(req_items, db)
+    amount_sen = int(round(total * 100))
+
+    client, key_id = _curlec_client()
+    intent_id = str(uuid.uuid4())
+    try:
+        order = client.order.create({
+            "amount": amount_sen,
+            "currency": "MYR",
+            "receipt": f"ORD-{intent_id[:8].upper()}",
+            "notes": {
+                "intent_id": intent_id,
+            },
+        })
+    except Exception as e:
+        logger.exception(f"Curlec order creation failed: {e}")
+        err_str = str(e)
+        if "minimum amount" in err_str.lower():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Payment amount (RM {amount_sen / 100:.2f}) is below the minimum allowed payment of RM 0.10.",
+            )
+        raise HTTPException(status_code=502, detail=f"Could not start the payment: {err_str[:120]}")
+
+    c_token = _get_client_token(request, (payload or {}).get("client_token", ""))
+    d_id = _get_device_id(request, explicit_device=(payload or {}).get("device_id", ""))
+
+    raw_phone = str((payload or {}).get("phone") or "").strip()
+    norm_phone = _normalize_my_phone(raw_phone) if raw_phone else ""
+    email = str((payload or {}).get("email") or "").strip()
     if email:
         if email[0] in ("=", "+", "-", "@"):
             raise HTTPException(status_code=400, detail="Invalid email format")
         if not re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", email) or len(email) > 100:
             raise HTTPException(status_code=400, detail="Enter a valid email address or leave it blank")
-        bill.receipt_email = email
-    bill.status = "open"
-    bill.void_reason = ""
-    bill.updated_at = datetime.utcnow()
+
+    intent = CheckoutIntent(
+        id=intent_id,
+        curlec_order_id=order["id"],
+        items_json=json.dumps([b.dict() for b in bill_items]),
+        total_amount=total,
+        client_token=c_token,
+        device_id=d_id,
+        receipt_phone=norm_phone,
+        receipt_email=email,
+        created_at=datetime.utcnow(),
+    )
+    db.add(intent)
     db.commit()
-    checkout = _create_curlec_order(bill, db)
-    checkout["status"] = "open"
-    return checkout
+
+    prof = _restaurant_profile()
+    return {
+        "key_id": key_id,
+        "order_id": order["id"],
+        "intent_id": intent_id,
+        "amount": amount_sen,
+        "currency": "MYR",
+        "restaurant_name": prof["restaurant_name"],
+        "company_name": prof["company_name"],
+        "company_phone": prof["company_phone"],
+        "company_email": prof["company_email"],
+        "status": "ready",
+    }
 
 @app.post("/api/pay/confirm")
 def pay_confirm(payload: dict, db: Session = Depends(get_db)):
-    bill, state = _verify_and_capture(
+    bill, state = _mint_receipt_from_payment(
         payload.get("razorpay_order_id"),
         payload.get("razorpay_payment_id"),
         payload.get("razorpay_signature"),
         db,
     )
     if state != "paid" or not bill:
-        if bill and bill.status != "paid":
-            bill.status = "open"
-            db.commit()
-        raise HTTPException(status_code=402, detail="Payment was not completed")
+        raise HTTPException(status_code=402, detail="Payment verification failed.")
     return {"status": "paid", "session_id": bill.id, "bill_number": bill.bill_number}
 
 @app.api_route("/api/pay/callback", methods=["GET", "POST"])
@@ -3039,23 +3038,14 @@ async def pay_callback(request: Request, db: Session = Depends(get_db)):
         form = await request.form()
     else:
         form = request.query_params
-    bill, state = _verify_and_capture(
-        form.get("razorpay_order_id"),
-        form.get("razorpay_payment_id"),
-        form.get("razorpay_signature"),
-        db,
-    )
-    session_id = (bill.id if bill else "") or str(request.query_params.get("session") or "").strip()
-    if state == "paid" and session_id:
-        return RedirectResponse(f"/payment/success?session={quote(session_id)}", status_code=303)
-    if bill and bill.status != "paid":
-        bill.status = "open"
-        bill.void_reason = ""
-        db.commit()
-    target = "/?payment=failed"
-    if session_id:
-        target = f"/?session={quote(session_id)}&payment=failed"
-    return RedirectResponse(target, status_code=303)
+    order_id = form.get("razorpay_order_id") or request.query_params.get("razorpay_order_id")
+    payment_id = form.get("razorpay_payment_id") or request.query_params.get("razorpay_payment_id")
+    sig = form.get("razorpay_signature") or request.query_params.get("razorpay_signature")
+
+    bill, state = _mint_receipt_from_payment(order_id, payment_id, sig, db)
+    if state == "paid" and bill:
+        return RedirectResponse(f"/payment/success?session={quote(bill.id)}", status_code=303)
+    return RedirectResponse("/?payment=failed", status_code=303)
 
 @app.post("/api/curlec/webhook")
 async def curlec_webhook(request: Request, db: Session = Depends(get_db)):
@@ -3085,10 +3075,8 @@ async def curlec_webhook(request: Request, db: Session = Depends(get_db)):
     if event.get("event") in ("payment.captured", "order.paid"):
         entity = ((event.get("payload") or {}).get("payment") or {}).get("entity") or {}
         order_id = str(entity.get("order_id") or "").strip()
-        payment = entity
-        bill = db.query(SessionBill).filter(SessionBill.curlec_order_id == order_id).first()
-        if bill and bill.status != "paid" and str(payment.get("status")) == "captured":
-            _record_captured_payment(bill, payment, db)
+        payment_id = str(entity.get("id") or "").strip()
+        _mint_receipt_from_payment(order_id, payment_id, "", db, bypass_sig=True, payment_entity=entity)
     return {"status": "ok"}
 
 
