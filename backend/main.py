@@ -3136,8 +3136,10 @@ def pay(payload: dict, request: Request, db: Session = Depends(get_db)):
                 "quantity": item.quantity,
             })
 
+        store_name = (prof.get("restaurant_name") or "Gerai TakCakap").strip()
         client_data = {
             "email": email or f"kiosk_{intent_id[:8]}@takcakap.com",
+            "full_name": store_name,
         }
         if norm_phone:
             client_data["phone"] = norm_phone
