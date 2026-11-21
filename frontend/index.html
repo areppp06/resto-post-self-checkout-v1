@@ -982,10 +982,10 @@
           }
 
           if (payData.gateway === "chip" && payData.checkout_url) {
-            // Forward customer directly to CHIP Hosted Checkout with DuitNow QR pre-selected
+            // Forward customer directly to CHIP Hosted Checkout with DuitNow QR automatically picked
             let destUrl = payData.checkout_url;
-            if (!destUrl.includes("preferred=")) {
-              destUrl += (destUrl.includes("?") ? "&" : "?") + "preferred=duitnow_qr";
+            if (!destUrl.includes("active=dnqr")) {
+              destUrl += (destUrl.includes("?") ? "&" : "?") + "active=dnqr&preferred=dnqr";
             }
             window.location.href = destUrl;
             return;

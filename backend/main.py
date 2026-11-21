@@ -3187,7 +3187,7 @@ def pay(payload: dict, request: Request, db: Session = Depends(get_db)):
         checkout_url = chip_data.get("checkout_url") or ""
         if checkout_url:
             sep = "&" if "?" in checkout_url else "?"
-            checkout_url = f"{checkout_url}{sep}preferred=duitnow_qr"
+            checkout_url = f"{checkout_url}{sep}active=dnqr&preferred=dnqr"
 
         intent = CheckoutIntent(
             id=intent_id,
