@@ -3184,7 +3184,10 @@ def pay(payload: dict, request: Request, db: Session = Depends(get_db)):
             raise HTTPException(status_code=502, detail=f"Could not connect to CHIP: {str(e)[:120]}")
 
         purchase_id = chip_data["id"]
-        checkout_url = chip_data["checkout_url"]
+        checkout_url = chip_data.get("checkout_url") or ""
+        if checkout_url:
+            sep = "&" if "?" in checkout_url else "?"
+            checkout_url = f"{checkout_url}{sep}preferred=duitnow_qr"
 
         intent = CheckoutIntent(
             id=intent_id,

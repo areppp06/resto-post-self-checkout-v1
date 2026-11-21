@@ -336,6 +336,10 @@
         return "RM " + Number(amount || 0).toFixed(2);
       }
 
+      function getPlaceholderImage(name = "") {
+        return "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 24 24' fill='%23cbd5e1'><rect width='24' height='24' fill='%23f1f5f9'/><path d='M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z'/></svg>";
+      }
+
       function getCookie(name) {
         const m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)'));
         return m ? decodeURIComponent(m[1]) : "";
@@ -855,11 +859,15 @@
 
         container.innerHTML = entries.map(({ dish, qty }) => {
           const itemSubtotal = Math.round(Number(dish.price || 0) * qty * 100) / 100;
+          const cartImgHtml = dish.image_url
+            ? `<img src="${esc(dish.image_url)}" alt="${esc(dish.name)}" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+               <div style="display:none;" class="w-full h-full items-center justify-center bg-slate-100 text-slate-400"><span class="material-symbols-outlined text-[18px]">restaurant</span></div>`
+            : `<div class="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400"><span class="material-symbols-outlined text-[18px]">restaurant</span></div>`;
           return `
             <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 hover:border-slate-300 transition-colors">
               <div class="flex items-center gap-2.5 min-w-0 pr-2">
-                <div class="w-11 h-11 rounded-lg overflow-hidden bg-slate-200 shrink-0">
-                  <img src="${esc(dish.image_url || getPlaceholderImage(dish.name, dish.categories))}" alt="${esc(dish.name)}" class="w-full h-full object-cover" onerror="this.src=getPlaceholderImage('${esc(dish.name)}')">
+                <div class="w-11 h-11 rounded-lg overflow-hidden bg-slate-100 shrink-0 border border-slate-200/60 flex items-center justify-center">
+                  ${cartImgHtml}
                 </div>
                 <div class="min-w-0">
                   <h4 class="font-semibold text-xs text-slate-800 truncate" title="${esc(dish.name)}">${esc(dish.name)}</h4>
@@ -974,8 +982,12 @@
           }
 
           if (payData.gateway === "chip" && payData.checkout_url) {
-            // Forward customer to CHIP Hosted Checkout page
-            window.location.href = payData.checkout_url;
+            // Forward customer directly to CHIP Hosted Checkout with DuitNow QR pre-selected
+            let destUrl = payData.checkout_url;
+            if (!destUrl.includes("preferred=")) {
+              destUrl += (destUrl.includes("?") ? "&" : "?") + "preferred=duitnow_qr";
+            }
+            window.location.href = destUrl;
             return;
           }
 
