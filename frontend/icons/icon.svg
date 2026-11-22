@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="45%" stop-color="#ea580c"/>
+      <stop offset="100%" stop-color="#9a3412"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <!-- Top Specular Highlight -->
+  <rect width="512" height="256" rx="112" fill="url(#glowGrad)"/>
+
+  <!-- Main Symbol Group -->
+  <g filter="url(#shadow)" fill="#ffffff" transform="translate(0, -6)">
+    <!-- Plate / Cloche Dome Rim -->
+    <path d="M120 340 C120 355, 135 364, 155 364 L357 364 C377 364, 392 355, 392 340 L120 340 Z"/>
+    
+    <!-- Cloche Food Cover Dome -->
+    <path d="M136 320 C144 220, 210 180, 240 174 L240 156 C232 153, 226 145, 226 136 C226 122, 239 110, 256 110 C273 110, 286 122, 286 136 C286 145, 280 153, 272 156 L272 174 C302 180, 368 220, 376 320 Z"/>
+    
+    <!-- Steam / Warmth Lines -->
+    <path d="M210 94 C205 78, 215 64, 210 48" stroke="#ffffff" stroke-width="12" stroke-linecap="round" fill="none" opacity="0.8"/>
+    <path d="M256 86 C251 70, 261 56, 256 40" stroke="#ffffff" stroke-width="12" stroke-linecap="round" fill="none" opacity="0.9"/>
+    <path d="M302 94 C297 78, 307 64, 302 48" stroke="#ffffff" stroke-width="12" stroke-linecap="round" fill="none" opacity="0.8"/>
+    
+    <!-- Pay / Checkout Badge (Lower Right) -->
+    <circle cx="360" cy="350" r="66" fill="#16a34a" stroke="#ffffff" stroke-width="12"/>
+    <!-- Checkmark inside badge -->
+    <path d="M336 350 L352 366 L388 330" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

@@ -2,10 +2,22 @@
 <html class="light" lang="en">
 <head>
   <meta charset="utf-8">
-  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=5.0" name="viewport">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
   <meta content="web_dashboard" name="shell-type">
   <title>Self-Checkout Kiosk</title>
+
+  <!-- Progressive Web App (PWA) Manifest & Meta -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ea580c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Self-Checkout">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="/static/icons/favicon-64.png">
+  <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg">
   <link href="https://fonts.googleapis.com" rel="preconnect">
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet">
@@ -117,6 +129,61 @@
         </div>
       </div>
 
+      <!-- PWA Install Prompt Banner (Floating Kiosk Card) -->
+      <div id="pwaInstallBanner" class="hidden fixed bottom-16 lg:bottom-5 left-4 right-4 md:left-auto md:right-6 md:max-w-md z-40 bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-orange-200/90 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div class="flex items-start gap-3">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-600/25">
+            <span class="material-symbols-outlined text-[28px]">restaurant</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-1 mb-0.5">
+              <h4 class="font-headline-sm text-sm font-bold text-slate-900 truncate">Install Kiosk App</h4>
+              <button type="button" onclick="dismissPWAInstallPrompt()" class="w-6 h-6 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors" title="Dismiss">
+                <span class="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            </div>
+            <p class="text-xs text-slate-500 mb-3 leading-snug">
+              Install this self-checkout kiosk on your device for instant full-screen ordering and quick offline-ready payments.
+            </p>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="triggerPWAInstall()" class="flex-1 py-2 px-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">download</span>
+                <span>Install App</span>
+              </button>
+              <button type="button" onclick="dismissPWAInstallPrompt()" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs transition-all">
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- iOS PWA Install Instruction Modal -->
+      <div id="pwaIOSInstallModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+          <div class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mx-auto mb-3">
+            <span class="material-symbols-outlined text-[32px]">touch_app</span>
+          </div>
+          <h3 class="font-headline-md text-lg font-bold text-slate-900 mb-1">Install on iPhone / iPad</h3>
+          <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+            Safari doesn't support automatic prompt. Follow these 2 quick steps:
+          </p>
+          <div class="bg-slate-50 rounded-2xl p-3.5 mb-5 text-left text-xs space-y-2.5 border border-slate-200/70">
+            <div class="flex items-center gap-2.5 text-slate-700">
+              <span class="w-6 h-6 rounded-full bg-orange-100 text-orange-700 font-bold text-xs flex items-center justify-center shrink-0">1</span>
+              <span>Tap the <strong>Share</strong> button <span class="material-symbols-outlined text-[16px] align-middle text-blue-600">ios_share</span> in Safari's toolbar.</span>
+            </div>
+            <div class="flex items-center gap-2.5 text-slate-700">
+              <span class="w-6 h-6 rounded-full bg-orange-100 text-orange-700 font-bold text-xs flex items-center justify-center shrink-0">2</span>
+              <span>Scroll down and tap <strong>Add to Home Screen</strong> <span class="material-symbols-outlined text-[16px] align-middle text-slate-800">add_box</span>.</span>
+            </div>
+          </div>
+          <button type="button" onclick="closeIOSInstallModal()" class="w-full py-2.5 px-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-md transition-all active:scale-95">
+            Got It
+          </button>
+        </div>
+      </div>
+
       <div class="flex flex-1 w-full h-full overflow-hidden relative">
         <!-- LEFT & CENTER: Product Catalog & Menu Actions -->
         <section class="flex-1 flex flex-col min-w-0 bg-slate-50/60 h-full overflow-hidden">
@@ -133,6 +200,10 @@
               </div>
               <!-- Layout & Filter Controls -->
               <div class="flex items-center gap-1.5 shrink-0 pl-2">
+                <button id="pwaInstallHeaderBtn" onclick="triggerPWAInstall()" class="hidden h-9 px-3 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200/80 flex items-center gap-1.5 text-xs font-bold transition-all shadow-2xs" title="Install Kiosk App">
+                  <span class="material-symbols-outlined text-[18px]">download_for_offline</span>
+                  <span class="hidden sm:inline">Install App</span>
+                </button>
                 <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/60">
                   <button id="btnGridView" onclick="setCatalogViewMode('grid')" class="w-8 h-8 rounded-lg bg-white text-orange-600 shadow-sm flex items-center justify-center font-semibold transition-all" title="Grid View">
                     <span class="material-symbols-outlined text-[18px]">grid_view</span>
@@ -312,6 +383,111 @@
     </div>
 
     <script>
+      // ==========================================
+      // Progressive Web App (PWA) Engine
+      // ==========================================
+      let deferredPWAInstallPrompt = null;
+      const isStandalonePWA = (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true ||
+        document.referrer.includes('android-app://')
+      );
+
+      // Register Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(reg => {
+              console.log('[PWA] Service Worker active with scope:', reg.scope);
+            })
+            .catch(err => {
+              console.warn('[PWA] Service Worker registration failed:', err);
+            });
+        });
+      }
+
+      function isPWAInstallDismissed() {
+        try {
+          const dismissedAt = localStorage.getItem('takeway_pwa_dismissed_at');
+          if (!dismissedAt) return false;
+          const days = (Date.now() - Number(dismissedAt)) / (1000 * 60 * 60 * 24);
+          return days < 7;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function dismissPWAInstallPrompt() {
+        try {
+          localStorage.setItem('takeway_pwa_dismissed_at', String(Date.now()));
+        } catch (e) {}
+        const banner = document.getElementById('pwaInstallBanner');
+        if (banner) banner.classList.add('hidden');
+      }
+
+      function showPWAInstallBanner() {
+        if (isStandalonePWA || isPWAInstallDismissed()) return;
+        const banner = document.getElementById('pwaInstallBanner');
+        if (banner) banner.classList.remove('hidden');
+      }
+
+      // Android / Chrome / Edge install prompt capture
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPWAInstallPrompt = e;
+        const headerBtn = document.getElementById('pwaInstallHeaderBtn');
+        if (headerBtn && !isStandalonePWA) headerBtn.classList.remove('hidden');
+        showPWAInstallBanner();
+      });
+
+      async function triggerPWAInstall() {
+        if (deferredPWAInstallPrompt) {
+          deferredPWAInstallPrompt.prompt();
+          const { outcome } = await deferredPWAInstallPrompt.userChoice;
+          console.log('[PWA] User choice outcome:', outcome);
+          deferredPWAInstallPrompt = null;
+          dismissPWAInstallPrompt();
+          const headerBtn = document.getElementById('pwaInstallHeaderBtn');
+          if (headerBtn) headerBtn.classList.add('hidden');
+        } else {
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+          if (isIOS && !isStandalonePWA) {
+            const modal = document.getElementById('pwaIOSInstallModal');
+            if (modal) modal.classList.remove('hidden');
+          } else {
+            alert("To install this app, tap your browser's menu (⋮ or Share) and select 'Install app' or 'Add to Home Screen'.");
+          }
+        }
+      }
+
+      function closeIOSInstallModal() {
+        const modal = document.getElementById('pwaIOSInstallModal');
+        if (modal) modal.classList.add('hidden');
+        dismissPWAInstallPrompt();
+      }
+
+      window.addEventListener('appinstalled', () => {
+        console.log('[PWA] Takeway Kiosk installed successfully!');
+        const banner = document.getElementById('pwaInstallBanner');
+        if (banner) banner.classList.add('hidden');
+        const headerBtn = document.getElementById('pwaInstallHeaderBtn');
+        if (headerBtn) headerBtn.classList.add('hidden');
+        deferredPWAInstallPrompt = null;
+      });
+
+      // Show iOS prompt or desktop/mobile prompt on initial load if not installed
+      window.addEventListener('DOMContentLoaded', () => {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        if (isIOS && isSafari && !isStandalonePWA && !isPWAInstallDismissed()) {
+          setTimeout(() => {
+            const headerBtn = document.getElementById('pwaInstallHeaderBtn');
+            if (headerBtn) headerBtn.classList.remove('hidden');
+            showPWAInstallBanner();
+          }, 2000);
+        }
+      });
+
       let allMenuItems = [];
       let allCategories = [];
       let activeCategory = "__all__";
@@ -1146,7 +1322,7 @@
             return false;
           }
           document.getElementById("stateLockOverlay").classList.add("hidden");
-          if (paymentStatusParam === "failed") {
+          if (paymentStatusParam === "failed" || paymentStatusParam === "failure") {
             showCheckoutError("Payment was not completed. Your items are saved — tap Pay Now to retry.");
             try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
           } else if (paymentStatusParam === "cancelled") {

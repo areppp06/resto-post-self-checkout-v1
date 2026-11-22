@@ -1028,6 +1028,43 @@ def robots_txt():
         },
     )
 
+@app.get("/manifest.json", include_in_schema=False)
+@app.get("/manifest.webmanifest", include_in_schema=False)
+def manifest_json():
+    return FileResponse(
+        "frontend/manifest.json",
+        media_type="application/manifest+json",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+@app.get("/sw.js", include_in_schema=False)
+def service_worker():
+    return FileResponse(
+        "frontend/sw.js",
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Service-Worker-Allowed": "/",
+        },
+    )
+
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+@app.get("/apple-touch-icon-precomposed.png", include_in_schema=False)
+def apple_touch_icon():
+    return FileResponse(
+        "frontend/icons/apple-touch-icon.png",
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse(
+        "frontend/icons/favicon-32.png",
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
 @app.get("/")
 async def root():
     settings = _restaurant_settings()
