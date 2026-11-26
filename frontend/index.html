@@ -764,6 +764,18 @@
         container.innerHTML = html;
       }
 
+      function getDishCategoryOrderIndex(dish, catOrderMap) {
+        if (!Array.isArray(dish.categories) || !dish.categories.length) return Number.MAX_SAFE_INTEGER;
+        let minIdx = Number.MAX_SAFE_INTEGER;
+        for (const c of dish.categories) {
+          const idx = catOrderMap[String(c || "").toLowerCase()];
+          if (idx !== undefined && idx < minIdx) {
+            minIdx = idx;
+          }
+        }
+        return minIdx;
+      }
+
       function getFilteredMenuItems() {
         const searchInp = document.getElementById("catalogSearchInput");
         const clearBtn = document.getElementById("btnClearSearch");
@@ -793,6 +805,17 @@
           list = [...list].sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
         } else if (sortMode === "name_asc") {
           list = [...list].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+        } else if (activeCategory === "__all__" && allCategories.length) {
+          const catOrderMap = {};
+          allCategories.forEach((cat, idx) => {
+            catOrderMap[String(cat.name || "").toLowerCase()] = idx;
+          });
+          list = [...list].sort((a, b) => {
+            const oa = getDishCategoryOrderIndex(a, catOrderMap);
+            const ob = getDishCategoryOrderIndex(b, catOrderMap);
+            if (oa !== ob) return oa - ob;
+            return (Number(a.sort_order || 0) - Number(b.sort_order || 0)) || (Number(a.id || 0) - Number(b.id || 0));
+          });
         }
         return list;
       }
