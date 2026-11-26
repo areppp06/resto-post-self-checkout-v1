@@ -1803,31 +1803,7 @@
     gap: 0.35rem;
   }
 
-  /* Compact Category Selection Box & Modal (Light White & Orange Theme matching Admin) */
-  .cat-select-card-box {
-    background: #ffffff;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 0.75rem 0.85rem;
-    color: #0f172a;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-  }
-  .cat-select-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.55rem;
-  }
-  .cat-select-card-title {
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #475569;
-  }
-  .cat-select-card-counter {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #ea580c;
-  }
+  /* Compact Category Selection Chips & Modal (Light White & Orange Theme matching Admin) */
   .cat-select-chips-container {
     display: flex;
     flex-wrap: wrap;
@@ -1888,13 +1864,6 @@
     background: #fff7ed;
     border-color: #ff5e36;
     color: #ea580c;
-  }
-  .cat-select-helper-text {
-    font-size: 0.73rem;
-    color: #64748b;
-    font-weight: 500;
-    margin-top: 0.4rem;
-    line-height: 1.2;
   }
 
   /* Choose Categories Modal / Bottom Sheet (White & Orange Theme) */
@@ -5153,28 +5122,20 @@ let pickerSearchQuery = "";
 
 function renderDishCategoryBox(dishId, selectedCategories) {
   const selected = Array.isArray(selectedCategories) ? selectedCategories.slice(0, 3) : [];
-  const count = selected.length;
 
   return `
-    <div class="cat-select-card-box" data-dish-cat-box="${dishId}">
-      <div class="cat-select-card-header">
-        <span class="cat-select-card-title">Select categories</span>
-        <span class="cat-select-card-counter" data-dish-cat-count="${dishId}">${count}/3</span>
-      </div>
-      <div class="cat-select-chips-container" data-dish-cat-chips="${dishId}">
-        ${selected.map(cat => `
-          <span class="cat-selected-chip" data-cat="${esc(cat)}">
-            <span>${esc(cat)}</span>
-            <button type="button" class="cat-selected-chip-remove" onclick="removeDishCategoryTag('${dishId}', '${esc(cat)}', event)" aria-label="Remove ${esc(cat)}">×</button>
-          </span>
-        `).join("")}
-        <button type="button" class="cat-add-trigger-btn" onclick="openDishCategoryPicker('${dishId}')">
-          <span>+ Add</span>
-          <svg style="width:12px; height:12px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-        </button>
-      </div>
+    <div class="cat-select-chips-container" data-dish-cat-chips="${dishId}">
+      ${selected.map(cat => `
+        <span class="cat-selected-chip" data-cat="${esc(cat)}">
+          <span>${esc(cat)}</span>
+          <button type="button" class="cat-selected-chip-remove" onclick="removeDishCategoryTag('${dishId}', '${esc(cat)}', event)" aria-label="Remove ${esc(cat)}">×</button>
+        </span>
+      `).join("")}
+      <button type="button" class="cat-add-trigger-btn" onclick="openDishCategoryPicker('${dishId}')">
+        <span>+ Add</span>
+        <svg style="width:12px; height:12px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
     </div>
-    <div class="cat-select-helper-text">Maximum 3 categories per menu item.</div>
   `;
 }
 
@@ -5196,9 +5157,6 @@ function updateDishCategoryBoxes(dishId) {
   if (dishObj && Array.isArray(dishObj.categories)) {
     selected = dishObj.categories.slice(0, 3);
   }
-  document.querySelectorAll(`[data-dish-cat-count="${dishId}"]`).forEach(el => {
-    el.textContent = `${selected.length}/3`;
-  });
   document.querySelectorAll(`[data-dish-cat-chips="${dishId}"]`).forEach(host => {
     host.innerHTML = `
       ${selected.map(cat => `
@@ -5534,8 +5492,7 @@ function renderMenuTableAndCards() {
         <td style="min-width:170px;">
           <input type="text" class="input-box dish-name-inp" value="${esc(d.name)}" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})" style="font-weight:700; color:#0f172a;">
         </td>
-        <td style="min-width:260px;">
-          <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:0.25rem;">CATEGORIES</div>
+        <td style="min-width:200px;">
           ${renderDishCategoryBox(d.id, d.categories)}
         </td>
         <td style="min-width:200px;">
@@ -5601,8 +5558,7 @@ function renderMenuTableAndCards() {
             <span>Menu Name</span>
             <input type="text" class="input-box dish-name-inp" value="${esc(d.name)}" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})" style="font-weight:700; color:#0f172a;">
           </label>
-          <div style="margin-top:0.45rem;">
-            <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:0.25rem;">CATEGORIES</div>
+          <div style="margin-top:0.35rem;">
             ${renderDishCategoryBox(d.id, d.categories)}
           </div>
           <label class="card-input-label" style="margin-top:0.35rem;">
