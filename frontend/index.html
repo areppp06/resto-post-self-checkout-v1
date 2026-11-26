@@ -23,12 +23,35 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
   <style>
-    @layer base {
-      html, body { margin: 0; padding: 0; }
-      body { overscroll-behavior: none; }
-      main > :first-child { margin-top: 0 !important; }
-      main > :last-child { margin-bottom: 0 !important; }
+    /* Rigid Kiosk Viewport: disable all overscroll / rubber-band bounce */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      overscroll-behavior-x: none;
+      overscroll-behavior-y: none;
+      -webkit-overscroll-behavior: none;
+      touch-action: manipulation;
     }
+    main > :first-child { margin-top: 0 !important; }
+    main > :last-child { margin-bottom: 0 !important; }
+
+    /* Strict scroll containment for inner scrollable panels */
+    .overflow-y-auto, .overflow-x-auto, #catalogContainer, #cartItemsContainer, #categoryScroll {
+      overscroll-behavior: contain;
+      overscroll-behavior-x: contain;
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
     ::-webkit-scrollbar { display: none; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -216,6 +239,9 @@
                   <span class="material-symbols-outlined text-[18px]">filter_list</span>
                   <span class="hidden xl:inline">Filter</span>
                 </button>
+                <button id="btnHeaderRefresh" onclick="location.reload()" class="h-9 w-9 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900 border border-slate-200/60 flex items-center justify-center transition-all shadow-2xs active:scale-95" title="Refresh Page">
+                  <span class="material-symbols-outlined text-[18px]">refresh</span>
+                </button>
               </div>
             </div>
 
@@ -383,6 +409,71 @@
     </div>
 
     <script>
+      // -------------------------------------------------------------
+      // Rigid Kiosk Mode: Prevent window-level rubber-band bounce
+      // -------------------------------------------------------------
+      (function() {
+        let touchStartY = 0;
+        let touchStartX = 0;
+
+        window.addEventListener('touchstart', function(e) {
+          if (e.touches && e.touches.length === 1) {
+            touchStartY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX;
+          }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', function(e) {
+          if (!e.touches || e.touches.length !== 1) return;
+
+          let el = e.target;
+          let scrollable = null;
+          while (el && el !== document.body && el !== document.documentElement) {
+            const style = window.getComputedStyle(el);
+            const canScrollY = (style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight;
+            const canScrollX = (style.overflowX === 'auto' || style.overflowX === 'scroll') && el.scrollWidth > el.clientWidth;
+            if (canScrollY || canScrollX) {
+              scrollable = el;
+              break;
+            }
+            el = el.parentElement;
+          }
+
+          if (!scrollable) {
+            if (e.cancelable) e.preventDefault();
+            return;
+          }
+
+          const currentY = e.touches[0].clientY;
+          const currentX = e.touches[0].clientX;
+          const deltaY = currentY - touchStartY;
+          const deltaX = currentX - touchStartX;
+
+          const style = window.getComputedStyle(scrollable);
+          const canScrollY = (style.overflowY === 'auto' || style.overflowY === 'scroll') && scrollable.scrollHeight > scrollable.clientHeight;
+          const canScrollX = (style.overflowX === 'auto' || style.overflowX === 'scroll') && scrollable.scrollWidth > scrollable.clientWidth;
+
+          // Block vertical overscroll at top/bottom
+          if (canScrollY && deltaY > 0 && scrollable.scrollTop <= 0) {
+            if (e.cancelable) e.preventDefault();
+            return;
+          }
+          if (canScrollY && deltaY < 0 && (scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1)) {
+            if (e.cancelable) e.preventDefault();
+            return;
+          }
+          // Block horizontal overscroll at left/right
+          if (canScrollX && deltaX > 0 && scrollable.scrollLeft <= 0) {
+            if (e.cancelable) e.preventDefault();
+            return;
+          }
+          if (canScrollX && deltaX < 0 && (scrollable.scrollLeft + scrollable.clientWidth >= scrollable.scrollWidth - 1)) {
+            if (e.cancelable) e.preventDefault();
+            return;
+          }
+        }, { passive: false });
+      })();
+
       // ==========================================
       // Progressive Web App (PWA) Engine
       // ==========================================
