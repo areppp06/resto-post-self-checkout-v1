@@ -1802,6 +1802,303 @@
     align-items: center;
     gap: 0.35rem;
   }
+
+  /* Compact Category Selection Box & Modal (Mockup Design) */
+  .cat-select-card-box {
+    background: #090d16;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 0.75rem 0.85rem;
+    color: #f8fafc;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  }
+  .cat-select-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.55rem;
+  }
+  .cat-select-card-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+  .cat-select-card-counter {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #94a3b8;
+  }
+  .cat-select-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 32px;
+  }
+  .cat-selected-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #0c2a4a;
+    border: 1px solid #1e40af;
+    color: #60a5fa;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.32rem 0.65rem;
+    border-radius: 8px;
+    user-select: none;
+    line-height: 1.2;
+  }
+  .cat-selected-chip-remove {
+    background: transparent;
+    border: none;
+    color: #93c5fd;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 0.1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+  }
+  .cat-selected-chip-remove:hover {
+    color: #ffffff;
+    transform: scale(1.18);
+  }
+  .cat-add-trigger-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: transparent;
+    border: 1px solid #334155;
+    color: #f8fafc;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.32rem 0.72rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    line-height: 1.2;
+  }
+  .cat-add-trigger-btn:hover {
+    background: #1e293b;
+    border-color: #64748b;
+    color: #ffffff;
+  }
+  .cat-select-helper-text {
+    font-size: 0.73rem;
+    color: #64748b;
+    font-weight: 500;
+    margin-top: 0.4rem;
+    line-height: 1.2;
+  }
+
+  /* Choose Categories Modal / Bottom Sheet */
+  .cat-picker-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .cat-picker-modal-backdrop.open {
+    display: flex;
+  }
+  .cat-picker-sheet {
+    background: #090d16;
+    border: 1px solid #1e293b;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 440px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    animation: modalScaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes modalScaleUp {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @media (max-width: 767px) {
+    .cat-picker-modal-backdrop {
+      align-items: flex-end;
+      padding: 0;
+    }
+    .cat-picker-sheet {
+      max-width: 100%;
+      border-radius: 20px 20px 0 0;
+      max-height: 85vh;
+      animation: sheetSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes sheetSlideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+  }
+  .cat-picker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.25rem 0.85rem;
+  }
+  .cat-picker-head-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .cat-picker-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+  }
+  .cat-picker-badge {
+    background: #1e293b;
+    color: #94a3b8;
+    border-radius: 9999px;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+  .cat-picker-close-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.2rem;
+    line-height: 1;
+    padding: 0.35rem 0.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .cat-picker-close-btn:hover {
+    background: #1e293b;
+    color: #ffffff;
+  }
+  .cat-picker-search-wrap {
+    position: relative;
+    padding: 0 1.25rem 0.85rem;
+  }
+  .cat-picker-search-icon {
+    position: absolute;
+    left: 2rem;
+    top: 45%;
+    transform: translateY(-50%);
+    font-size: 0.95rem;
+    color: #64748b;
+    pointer-events: none;
+  }
+  .cat-picker-search-input {
+    width: 100%;
+    background: #111827;
+    border: 1px solid #1f293d;
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 0.75rem 2.2rem 0.75rem 2.4rem;
+    font-size: 0.92rem;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.15s ease;
+  }
+  .cat-picker-search-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+  .cat-picker-search-input::placeholder {
+    color: #64748b;
+  }
+  .cat-picker-clear-search {
+    position: absolute;
+    right: 1.85rem;
+    top: 45%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0.2rem;
+  }
+  .cat-picker-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 1.25rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  .cat-picker-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.95rem 0.5rem;
+    border-bottom: 1px solid #161e2e;
+    cursor: pointer;
+    transition: background 0.12s ease;
+    user-select: none;
+  }
+  .cat-picker-item:last-child {
+    border-bottom: none;
+  }
+  .cat-picker-item:hover {
+    background: #111827;
+    border-radius: 8px;
+  }
+  .cat-picker-item-name {
+    font-size: 0.96rem;
+    font-weight: 600;
+    color: #f1f5f9;
+  }
+  .cat-picker-radio {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #475569;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+  }
+  .cat-picker-radio.checked {
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #090d16;
+  }
+  .cat-picker-checkmark {
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .cat-picker-foot {
+    padding: 0.85rem 1.25rem 1.25rem;
+    border-top: 1px solid #161e2e;
+    background: #090d16;
+  }
+  .cat-picker-done-btn {
+    width: 100%;
+    background: #2563eb;
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: 12px;
+    padding: 0.75rem;
+    font-size: 0.94rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .cat-picker-done-btn:hover {
+    background: #1d4ed8;
+  }
   .menu-drag-row {
     transition: background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   }
@@ -2310,14 +2607,14 @@
               </div>
             </div>
 
-            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; padding-top:0.35rem; border-top:1px dashed #e2e8f0;">
-              <div style="flex:1; min-width:240px;">
-                <div style="font-size:0.78rem; font-weight:700; color:#475569; margin-bottom:0.35rem;">
-                  Tag Categories <span style="font-weight:500; color:#94a3b8;">(Select up to 3)</span>
+            <div style="display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; padding-top:0.35rem; border-top:1px dashed #e2e8f0;">
+              <div style="flex:1; min-width:260px;">
+                <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:0.25rem;">
+                  CATEGORIES
                 </div>
-                <div class="cat-picker-wrap" id="newDishCategoriesPicker"></div>
+                <div id="newDishCategoriesPicker"></div>
               </div>
-              <button class="btn" type="submit" id="btnAddDishSubmit">+ Add Menu Item</button>
+              <button class="btn" type="submit" id="btnAddDishSubmit" style="height:40px; margin-bottom:0.35rem;">+ Add Menu Item</button>
             </div>
           </form>
           <p id="error" style="color:#ef4444; font-size:0.84rem; margin-top:0.6rem; min-height:1.1rem;"></p>
@@ -2865,6 +3162,28 @@
     </div>
   </div>
 </div>
+
+<div class="modal-backdrop cat-picker-modal-backdrop" id="dishCategoryPickerModal" onclick="if(event.target===this) closeDishCategoryPicker()">
+  <div class="cat-picker-sheet" role="dialog" aria-modal="true" aria-labelledby="catPickerTitle">
+    <div class="cat-picker-head">
+      <div class="cat-picker-head-left">
+        <h3 id="catPickerTitle" class="cat-picker-title">Choose categories</h3>
+        <span class="cat-picker-badge" id="catPickerCountBadge">0/3 selected</span>
+      </div>
+      <button type="button" class="cat-picker-close-btn" onclick="closeDishCategoryPicker()" aria-label="Close picker modal">✕</button>
+    </div>
+    <div class="cat-picker-search-wrap">
+      <span class="cat-picker-search-icon">🔍</span>
+      <input type="text" id="catPickerSearchInput" class="cat-picker-search-input" placeholder="Search categories..." oninput="onFilterPickerCategories(this.value)">
+      <button type="button" id="catPickerClearSearch" class="cat-picker-clear-search" onclick="clearPickerSearch()" style="display:none;" aria-label="Clear search">✕</button>
+    </div>
+    <div class="cat-picker-list" id="catPickerList"></div>
+    <div class="cat-picker-foot">
+      <button type="button" class="btn cat-picker-done-btn" onclick="closeDishCategoryPicker()">Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
@@ -4496,38 +4815,12 @@ function renderNewDishCategoriesPicker() {
   if (!host) return;
   const validNames = new Set(allAdminCategories.map(c => c.name));
   newDishSelectedCategories = newDishSelectedCategories.filter(n => validNames.has(n));
-
-  if (!allAdminCategories.length) {
-    host.innerHTML = `<span style="font-size:0.78rem; color:#94a3b8;">No categories available yet. Add categories in the <a href="javascript:void(0)" onclick="switchTab('categories','Categories Management')" style="color:#ff5e36; font-weight:700;">Categories</a> tab.</span>`;
-    return;
-  }
-
-  host.innerHTML = allAdminCategories.map(cat => {
-    const isSel = newDishSelectedCategories.includes(cat.name);
-    const encName = esc(cat.name);
-    return `
-      <button type="button" class="cat-pick-pill ${isSel ? "selected" : ""}" data-cat-name="${encName}" onclick="toggleNewDishCategory(this.dataset.catName)">
-        <span class="material-symbols-outlined">${esc(cat.icon || "restaurant")}</span>
-        <span>${encName}</span>
-        ${isSel ? '<span class="cat-pick-check">✓</span>' : ""}
-      </button>
-    `;
-  }).join("");
+  host.innerHTML = renderDishCategoryBox("new", newDishSelectedCategories);
 }
 
 function toggleNewDishCategory(catName) {
-  if (!catName) return;
-  const idx = newDishSelectedCategories.indexOf(catName);
-  if (idx >= 0) {
-    newDishSelectedCategories.splice(idx, 1);
-  } else {
-    if (newDishSelectedCategories.length >= 3) {
-      showToast("Each menu item can tag up to 3 categories.");
-      return;
-    }
-    newDishSelectedCategories.push(catName);
-  }
-  renderNewDishCategoriesPicker();
+  activePickerDishId = "new";
+  togglePickerCategory(catName);
 }
 
 function renderCategoriesDragList() {
@@ -4820,35 +5113,240 @@ function onMobileSwitchToggle(dishId, checkbox) {
   flushAutoSaveDish(dishId);
 }
 
+let activePickerDishId = null;
+let pickerSearchQuery = "";
+
+function renderDishCategoryBox(dishId, selectedCategories) {
+  const selected = Array.isArray(selectedCategories) ? selectedCategories.slice(0, 3) : [];
+  const count = selected.length;
+
+  return `
+    <div class="cat-select-card-box" data-dish-cat-box="${dishId}">
+      <div class="cat-select-card-header">
+        <span class="cat-select-card-title">Select categories</span>
+        <span class="cat-select-card-counter" data-dish-cat-count="${dishId}">${count}/3</span>
+      </div>
+      <div class="cat-select-chips-container" data-dish-cat-chips="${dishId}">
+        ${selected.map(cat => `
+          <span class="cat-selected-chip" data-cat="${esc(cat)}">
+            <span>${esc(cat)}</span>
+            <button type="button" class="cat-selected-chip-remove" onclick="removeDishCategoryTag('${dishId}', '${esc(cat)}', event)" aria-label="Remove ${esc(cat)}">×</button>
+          </span>
+        `).join("")}
+        <button type="button" class="cat-add-trigger-btn" onclick="openDishCategoryPicker('${dishId}')">
+          <span>+ Add</span>
+          <svg style="width:12px; height:12px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+      </div>
+    </div>
+    <div class="cat-select-helper-text">Maximum 3 categories per menu item.</div>
+  `;
+}
+
 function renderDishCategoriesPills(d) {
-  const selected = Array.isArray(d.categories) ? d.categories : [];
+  return renderDishCategoryBox(d.id, d.categories);
+}
+
+function updateDishCategoryBoxes(dishId) {
+  let selected = [];
+  if (String(dishId) === "new") {
+    selected = newDishSelectedCategories;
+    const boxHost = document.getElementById("newDishCategoriesPicker");
+    if (boxHost) {
+      boxHost.innerHTML = renderDishCategoryBox("new", selected);
+    }
+    return;
+  }
+  const dishObj = currentMenuDishes.find(x => Number(x.id) === Number(dishId));
+  if (dishObj && Array.isArray(dishObj.categories)) {
+    selected = dishObj.categories.slice(0, 3);
+  }
+  document.querySelectorAll(`[data-dish-cat-count="${dishId}"]`).forEach(el => {
+    el.textContent = `${selected.length}/3`;
+  });
+  document.querySelectorAll(`[data-dish-cat-chips="${dishId}"]`).forEach(host => {
+    host.innerHTML = `
+      ${selected.map(cat => `
+        <span class="cat-selected-chip" data-cat="${esc(cat)}">
+          <span>${esc(cat)}</span>
+          <button type="button" class="cat-selected-chip-remove" onclick="removeDishCategoryTag('${dishId}', '${esc(cat)}', event)" aria-label="Remove ${esc(cat)}">×</button>
+        </span>
+      `).join("")}
+      <button type="button" class="cat-add-trigger-btn" onclick="openDishCategoryPicker('${dishId}')">
+        <span>+ Add</span>
+        <svg style="width:12px; height:12px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+    `;
+  });
+}
+
+function removeDishCategoryTag(dishId, catName, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  if (!catName) return;
+
+  if (String(dishId) === "new") {
+    const idx = newDishSelectedCategories.indexOf(catName);
+    if (idx >= 0) newDishSelectedCategories.splice(idx, 1);
+    updateDishCategoryBoxes("new");
+    if (String(activePickerDishId) === "new") renderPickerCategoriesList();
+    return;
+  }
+
+  let dishObj = currentMenuDishes.find(x => Number(x.id) === Number(dishId));
+  if (!dishObj) {
+    dishObj = { id: Number(dishId), categories: getDishSelectedCategories(dishId) };
+    currentMenuDishes.push(dishObj);
+  }
+  if (!Array.isArray(dishObj.categories)) dishObj.categories = [];
+
+  const idx = dishObj.categories.indexOf(catName);
+  if (idx >= 0) {
+    dishObj.categories.splice(idx, 1);
+  }
+  updateDishCategoryBoxes(dishId);
+  if (String(activePickerDishId) === String(dishId)) {
+    renderPickerCategoriesList();
+  }
+  flushAutoSaveDish(dishId);
+}
+
+function openDishCategoryPicker(dishId) {
+  activePickerDishId = dishId;
+  pickerSearchQuery = "";
+  const searchInp = document.getElementById("catPickerSearchInput");
+  if (searchInp) searchInp.value = "";
+  const clearBtn = document.getElementById("catPickerClearSearch");
+  if (clearBtn) clearBtn.style.display = "none";
+
+  renderPickerCategoriesList();
+
+  const modal = document.getElementById("dishCategoryPickerModal");
+  if (modal) modal.classList.add("open");
+}
+
+function closeDishCategoryPicker() {
+  const modal = document.getElementById("dishCategoryPickerModal");
+  if (modal) modal.classList.remove("open");
+  activePickerDishId = null;
+}
+
+function onFilterPickerCategories(val) {
+  pickerSearchQuery = (val || "").trim().toLowerCase();
+  const clearBtn = document.getElementById("catPickerClearSearch");
+  if (clearBtn) clearBtn.style.display = pickerSearchQuery ? "block" : "none";
+  renderPickerCategoriesList();
+}
+
+function clearPickerSearch() {
+  pickerSearchQuery = "";
+  const searchInp = document.getElementById("catPickerSearchInput");
+  if (searchInp) {
+    searchInp.value = "";
+    searchInp.focus();
+  }
+  const clearBtn = document.getElementById("catPickerClearSearch");
+  if (clearBtn) clearBtn.style.display = "none";
+  renderPickerCategoriesList();
+}
+
+function getActivePickerSelectedCategories() {
+  if (String(activePickerDishId) === "new") {
+    return newDishSelectedCategories;
+  }
+  const dishObj = currentMenuDishes.find(x => Number(x.id) === Number(activePickerDishId));
+  if (dishObj && Array.isArray(dishObj.categories)) {
+    return dishObj.categories;
+  }
+  return [];
+}
+
+function renderPickerCategoriesList() {
+  const listHost = document.getElementById("catPickerList");
+  const countBadge = document.getElementById("catPickerCountBadge");
+  if (!listHost) return;
+
+  const selected = getActivePickerSelectedCategories();
+  if (countBadge) {
+    countBadge.textContent = `${selected.length}/3 selected`;
+  }
+
   const catNames = allAdminCategories.map(c => c.name);
   selected.forEach(s => {
     if (!catNames.includes(s)) catNames.push(s);
   });
-  if (!catNames.length) {
-    return `<span style="font-size:0.75rem; color:#94a3b8;">No categories defined</span>`;
+
+  const filtered = catNames.filter(name => {
+    if (!pickerSearchQuery) return true;
+    return name.toLowerCase().includes(pickerSearchQuery);
+  });
+
+  if (!filtered.length) {
+    listHost.innerHTML = `
+      <div style="text-align:center; padding:2.5rem 1rem; color:#64748b; font-size:0.9rem;">
+        ${catNames.length === 0 ? "No categories created yet." : "No categories match your search."}
+      </div>
+    `;
+    return;
   }
-  return `
-    <div>
-      <div class="cat-picker-meta">
-        <span data-dish-cat-count="${d.id}">${selected.length}/3 tagged</span>
-        <span style="color:#94a3b8; font-weight:500;">· Click pill to edit</span>
+
+  listHost.innerHTML = filtered.map(name => {
+    const isSel = selected.includes(name);
+    return `
+      <div class="cat-picker-item ${isSel ? "selected" : ""}" onclick="togglePickerCategory('${esc(name)}')">
+        <div class="cat-picker-item-left">
+          <span class="cat-picker-item-name">${esc(name)}</span>
+        </div>
+        <div class="cat-picker-radio ${isSel ? "checked" : ""}">
+          ${isSel ? '<span class="cat-picker-checkmark">✓</span>' : ""}
+        </div>
       </div>
-      <div class="cat-picker-wrap" data-dish-cat-wrap="${d.id}">
-        ${catNames.map(cName => {
-          const isSel = selected.includes(cName);
-          const enc = esc(cName);
-          const icon = esc(getCategoryIcon(cName));
-          return `<button type="button" class="cat-pick-pill ${isSel ? "selected" : ""}" data-dish-id="${d.id}" data-cat-name="${enc}" onclick="toggleDishCategoryTag(${d.id}, this.dataset.catName)">
-            <span class="material-symbols-outlined">${icon}</span>
-            <span>${enc}</span>
-            ${isSel ? '<span class="cat-pick-check">✓</span>' : ""}
-          </button>`;
-        }).join("")}
-      </div>
-    </div>
-  `;
+    `;
+  }).join("");
+}
+
+function togglePickerCategory(catName) {
+  if (!catName || activePickerDishId === null) return;
+
+  if (String(activePickerDishId) === "new") {
+    const idx = newDishSelectedCategories.indexOf(catName);
+    if (idx >= 0) {
+      newDishSelectedCategories.splice(idx, 1);
+    } else {
+      if (newDishSelectedCategories.length >= 3) {
+        showToast("Each menu item can tag up to 3 categories.");
+        return;
+      }
+      newDishSelectedCategories.push(catName);
+    }
+    updateDishCategoryBoxes("new");
+    renderPickerCategoriesList();
+    return;
+  }
+
+  let dishObj = currentMenuDishes.find(x => Number(x.id) === Number(activePickerDishId));
+  if (!dishObj) {
+    dishObj = { id: Number(activePickerDishId), categories: getDishSelectedCategories(activePickerDishId) };
+    currentMenuDishes.push(dishObj);
+  }
+  if (!Array.isArray(dishObj.categories)) dishObj.categories = [];
+
+  const idx = dishObj.categories.indexOf(catName);
+  if (idx >= 0) {
+    dishObj.categories.splice(idx, 1);
+  } else {
+    if (dishObj.categories.length >= 3) {
+      showToast("Each menu item can tag up to 3 categories.");
+      return;
+    }
+    dishObj.categories.push(catName);
+  }
+
+  updateDishCategoryBoxes(activePickerDishId);
+  renderPickerCategoriesList();
+  flushAutoSaveDish(activePickerDishId);
 }
 
 function renderDishPhotoControl(d) {
@@ -4866,50 +5364,21 @@ function renderDishPhotoControl(d) {
 }
 
 function getDishSelectedCategories(dishId) {
+  if (String(dishId) === "new") {
+    return Array.isArray(newDishSelectedCategories) ? newDishSelectedCategories.slice(0, 3) : [];
+  }
   const dishObj = currentMenuDishes.find(x => Number(x.id) === Number(dishId));
   if (dishObj && Array.isArray(dishObj.categories)) {
     return dishObj.categories.slice(0, 3);
   }
-  const row = document.querySelector(`tr[data-dish-id="${dishId}"]`);
-  const card = document.querySelector(`.menu-mobile-card[data-dish-id="${dishId}"]`);
-  const host = row || card;
+  const host = document.querySelector(`[data-dish-cat-chips="${dishId}"]`);
   if (!host) return [];
-  return [...host.querySelectorAll(".cat-pick-pill.selected")].map(b => b.dataset.catName).filter(Boolean).slice(0, 3);
+  return [...host.querySelectorAll(".cat-selected-chip")].map(b => b.dataset.cat).filter(Boolean).slice(0, 3);
 }
 
 function toggleDishCategoryTag(dishId, catName) {
-  if (!catName) return;
-  let dishObj = currentMenuDishes.find(x => Number(x.id) === Number(dishId));
-  if (!dishObj) {
-    dishObj = { id: Number(dishId), categories: getDishSelectedCategories(dishId) };
-    currentMenuDishes.push(dishObj);
-  }
-  if (!Array.isArray(dishObj.categories)) dishObj.categories = [];
-
-  const idx = dishObj.categories.indexOf(catName);
-  if (idx >= 0) {
-    dishObj.categories.splice(idx, 1);
-  } else {
-    if (dishObj.categories.length >= 3) {
-      showToast("Each menu item can tag up to 3 categories.");
-      return;
-    }
-    dishObj.categories.push(catName);
-  }
-
-  document.querySelectorAll(`[data-dish-cat-count="${dishId}"]`).forEach(el => {
-    el.textContent = `${dishObj.categories.length}/3 tagged`;
-  });
-
-  document.querySelectorAll(`[data-dish-cat-wrap="${dishId}"] .cat-pick-pill`).forEach(btn => {
-    const cName = btn.dataset.catName;
-    const isSel = dishObj.categories.includes(cName);
-    const icon = esc(getCategoryIcon(cName));
-    btn.classList.toggle("selected", isSel);
-    btn.innerHTML = `<span class="material-symbols-outlined">${icon}</span><span>${esc(cName)}</span>${isSel ? '<span class="cat-pick-check">✓</span>' : ""}`;
-  });
-
-  flushAutoSaveDish(dishId);
+  activePickerDishId = dishId;
+  togglePickerCategory(catName);
 }
 
 /* Menu Drag & Drop Position Reordering */
@@ -5026,8 +5495,9 @@ function renderMenuTableAndCards() {
         <td style="min-width:170px;">
           <input type="text" class="input-box dish-name-inp" value="${esc(d.name)}" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})" style="font-weight:700; color:#0f172a;">
         </td>
-        <td style="min-width:240px;">
-          ${renderDishCategoriesPills(d)}
+        <td style="min-width:260px;">
+          <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:0.25rem;">CATEGORIES</div>
+          ${renderDishCategoryBox(d.id, d.categories)}
         </td>
         <td style="min-width:200px;">
           <textarea class="input-box desc" maxlength="500" rows="2" placeholder="Optional description" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">${esc(d.description || "")}</textarea>
@@ -5092,9 +5562,9 @@ function renderMenuTableAndCards() {
             <span>Menu Name</span>
             <input type="text" class="input-box dish-name-inp" value="${esc(d.name)}" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})" style="font-weight:700; color:#0f172a;">
           </label>
-          <div class="card-input-label" style="margin-top:0.35rem;">
-            <span>Categories (Up to 3)</span>
-            ${renderDishCategoriesPills(d)}
+          <div style="margin-top:0.45rem;">
+            <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:0.25rem;">CATEGORIES</div>
+            ${renderDishCategoryBox(d.id, d.categories)}
           </div>
           <label class="card-input-label" style="margin-top:0.35rem;">
             <span>Price</span>
