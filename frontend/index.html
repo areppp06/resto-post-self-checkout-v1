@@ -858,23 +858,13 @@
                <div style="display:none;" class="w-full h-full items-center justify-center bg-slate-100 text-slate-300"><span class="material-symbols-outlined text-[36px]">restaurant</span></div>`
             : `<div class="w-full h-full flex items-center justify-center bg-slate-100 text-slate-300"><span class="material-symbols-outlined text-[36px]">restaurant</span></div>`;
 
-          const catsBadges = (item.categories || []).slice(0, 3).map(c =>
-            `<span class="px-1.5 py-0.5 rounded-md bg-black/50 backdrop-blur-sm text-white text-[10px] font-medium truncate max-w-[110px]">${esc(c)}</span>`
-          ).join("");
-
           return `
             <div onclick="addToCart(${item.id}, this)" class="product-item group relative bg-white hover:border-orange-300 ${inCartQty > 0 ? 'border-orange-300 ring-1 ring-orange-500/20' : 'border-slate-200/80'} border rounded-2xl p-2.5 flex flex-col justify-between transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md active:scale-[0.98] overflow-hidden" data-id="${item.id}" data-name="${esc(item.name)}" data-price="${Number(item.price).toFixed(2)}">
               <div class="relative w-full aspect-[4/3] rounded-xl overflow-hidden mb-2 bg-slate-100">
                 ${imgHtml}
-                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent pointer-events-none"></div>
                 ${inCartQty > 0 ? `
                   <div class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-orange-600 text-white text-[11px] font-extrabold shadow-md flex items-center gap-0.5">
                     <span>&times;${inCartQty}</span>
-                  </div>
-                ` : ''}
-                ${catsBadges ? `
-                  <div class="absolute bottom-1.5 left-1.5 right-1.5 flex flex-wrap gap-1 pointer-events-none">
-                    ${catsBadges}
                   </div>
                 ` : ''}
               </div>
