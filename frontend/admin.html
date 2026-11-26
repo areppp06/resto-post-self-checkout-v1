@@ -2215,12 +2215,26 @@
     border: 1.5px dashed #cbd5e1;
     background: #f8fafc;
     color: #94a3b8;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     font-size: 0.68rem;
-    font-weight: 600;
+    font-weight: 700;
     flex-shrink: 0;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.16s ease;
+    user-select: none;
+    line-height: 1.2;
+    padding: 0;
+  }
+  .menu-photo-placeholder:hover {
+    border-color: #ff5e36;
+    color: #ff5e36;
+    background: #fff7ed;
+    border-style: solid;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(255, 94, 54, 0.15);
   }
   .cat-drag-list {
     display: flex;
@@ -2621,7 +2635,7 @@
               </label>
               <div class="field-label">Menu Photo
                 <div style="display:flex; align-items:center; gap:0.65rem;">
-                  <div id="newPhotoPreviewBox" class="menu-photo-placeholder">No photo</div>
+                  <div id="newPhotoPreviewBox" class="menu-photo-placeholder" onclick="document.getElementById('newPhotoFileInput').click()" title="Click to choose photo">No photo</div>
                   <input type="file" id="newPhotoFileInput" accept="image/*" style="display:none;" onchange="onNewDishPhotoSelected(event)">
                   <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('newPhotoFileInput').click()">Choose Photo</button>
                 </div>
@@ -5371,15 +5385,19 @@ function togglePickerCategory(catName) {
 }
 
 function renderDishPhotoControl(d) {
-  const thumb = (d.has_image && d.image_url)
-    ? `<img src="${esc(d.image_url)}" alt="${esc(d.name)}" class="menu-photo-thumb" onclick="viewPhoto('${esc(d.image_url)}')" title="Click to enlarge" loading="lazy">`
-    : `<div class="menu-photo-placeholder">No photo</div>`;
+  if (d.has_image && d.image_url) {
+    return `
+      <div class="menu-photo-cell">
+        <img src="${esc(d.image_url)}" alt="${esc(d.name)}" class="menu-photo-thumb" onclick="viewPhoto('${esc(d.image_url)}')" title="Click to enlarge" loading="lazy">
+        <div class="menu-photo-actions">
+          <button type="button" class="btn btn-outline btn-sm" style="padding:0.25rem 0.55rem; font-size:0.72rem;" onclick="triggerDishPhotoUpload(${d.id})">Change</button>
+        </div>
+      </div>
+    `;
+  }
   return `
     <div class="menu-photo-cell">
-      ${thumb}
-      <div class="menu-photo-actions">
-        <button type="button" class="btn btn-outline btn-sm" style="padding:0.25rem 0.55rem; font-size:0.72rem;" onclick="triggerDishPhotoUpload(${d.id})">${d.has_image ? "Change" : "Upload"}</button>
-      </div>
+      <button type="button" class="menu-photo-placeholder" onclick="triggerDishPhotoUpload(${d.id})" title="Click to upload photo">No photo</button>
     </div>
   `;
 }
