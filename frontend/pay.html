@@ -1188,9 +1188,10 @@ function renderVoidedBillView(data) {
   if (data.items && data.items.length) {
     itemsHtml = '<div class="item-list" style="margin-bottom:0.75rem; opacity:0.8;">';
     data.items.forEach(item => {
+      const pieces = item.piece_count ? `<span class="item-pieces">(${esc(item.piece_count)} pcs)</span>` : "";
       itemsHtml += `
         <div class="item">
-          <span class="item-name">${esc(item.name)} <span style="color:#94a3b8; font-weight:400;">× ${esc(item.quantity)}</span></span>
+          <span class="item-name">${esc(item.name)} <span style="color:#94a3b8; font-weight:400;">× ${esc(item.quantity)}</span>${pieces}</span>
           <span class="item-price">RM ${Number(item.subtotal).toFixed(2)}</span>
         </div>`;
     });
@@ -1258,9 +1259,10 @@ async function load() {
 
     let html = '<div class="item-list">';
     data.items.forEach(item => {
+      const pieces = item.piece_count ? `<span class="item-pieces">(${esc(item.piece_count)} pcs)</span>` : "";
       html += `
         <div class="item">
-          <span class="item-name">${esc(item.name)} <span style="color:#94a3b8; font-weight:400;">× ${esc(item.quantity)}</span></span>
+          <span class="item-name">${esc(item.name)} <span style="color:#94a3b8; font-weight:400;">× ${esc(item.quantity)}</span>${pieces}</span>
           <span class="item-price">RM ${Number(item.subtotal).toFixed(2)}</span>
         </div>`;
     });

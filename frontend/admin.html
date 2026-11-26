@@ -2599,6 +2599,9 @@
                   <button type="button" class="price-step-btn" onclick="stepPriceInput('newPrice', 1)" aria-label="Increase price by 1">+</button>
                 </div>
               </label>
+              <label class="field-label" style="max-width:140px;">Pieces / Portion
+                <input class="input-box" id="newPieces" max="100" min="1" required step="1" type="number" value="1">
+              </label>
               <label class="field-label">Description (optional)
                 <input class="input-box" id="newDescription" maxlength="500" placeholder="Short description (optional)" type="text">
               </label>
@@ -2684,6 +2687,7 @@
                 <th style="min-width:170px;">Menu Name</th>
                 <th style="min-width:240px;">Categories (Max 3)</th>
                 <th style="min-width:200px;">Description</th>
+                <th style="width:110px;">Pieces / Portion</th>
                 <th style="width:190px;">Price</th>
                 <th style="width:100px; text-align:center;">Available Today</th>
                 <th style="width:80px;"></th>
@@ -5498,6 +5502,9 @@ function renderMenuTableAndCards() {
         <td style="min-width:200px;">
           <textarea class="input-box desc" maxlength="500" rows="2" placeholder="Optional description" data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">${esc(d.description || "")}</textarea>
         </td>
+        <td style="width:110px;">
+          <input type="number" min="1" max="100" step="1" value="${d.pieces_per_portion || 1}" data-id="${d.id}" class="input-box pieces" required oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">
+        </td>
         <td style="width:190px;">
           <div class="price-stepper-wrap">
             <button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, -1)" aria-label="Decrease price by 1">−</button>
@@ -5519,7 +5526,7 @@ function renderMenuTableAndCards() {
     const noRow = document.createElement("tr");
     noRow.id = "menuNoMatchRow";
     noRow.style.display = "none";
-    noRow.innerHTML = '<td colspan="8" style="text-align:center; padding:2.5rem 1rem; color:#94a3b8; font-style:italic;">No menu items match your search query.</td>';
+    noRow.innerHTML = '<td colspan="9" style="text-align:center; padding:2.5rem 1rem; color:#94a3b8; font-style:italic;">No menu items match your search query.</td>';
     tbody.appendChild(noRow);
   }
 
@@ -5561,17 +5568,23 @@ function renderMenuTableAndCards() {
           <div style="margin-top:0.35rem;">
             ${renderDishCategoryBox(d.id, d.categories)}
           </div>
-          <label class="card-input-label" style="margin-top:0.35rem;">
-            <span>Price</span>
-            <div class="price-stepper-wrap">
-              <button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, -1)" aria-label="Decrease price by 1">−</button>
-              <div class="input-with-prefix">
-                <span class="currency-prefix">RM</span>
-                <input type="number" step="0.01" min="0" value="${Number(d.price).toFixed(2)}" data-id="${d.id}" class="input-box prefix-input price" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">
+          <div style="display:grid; grid-template-columns: 1fr 1.3fr; gap:0.5rem; margin-top:0.35rem; align-items:end;">
+            <label class="card-input-label">
+              <span>Pieces / Portion</span>
+              <input type="number" min="1" max="100" step="1" value="${d.pieces_per_portion || 1}" data-id="${d.id}" class="input-box pieces" required oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">
+            </label>
+            <label class="card-input-label">
+              <span>Price</span>
+              <div class="price-stepper-wrap">
+                <button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, -1)" aria-label="Decrease price by 1">−</button>
+                <div class="input-with-prefix">
+                  <span class="currency-prefix">RM</span>
+                  <input type="number" step="0.01" min="0" value="${Number(d.price).toFixed(2)}" data-id="${d.id}" class="input-box prefix-input price" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">
+                </div>
+                <button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, 1)" aria-label="Increase price by 1">+</button>
               </div>
-              <button type="button" class="price-step-btn" onclick="stepDishPrice(${d.id}, 1)" aria-label="Increase price by 1">+</button>
-            </div>
-          </label>
+            </label>
+          </div>
           <label class="card-input-label" style="margin-top:0.35rem;">
             <span>Description (Optional)</span>
             <textarea class="input-box desc" maxlength="500" rows="2" placeholder="Optional description..." data-id="${d.id}" oninput="triggerAutoSaveDish(${d.id})" onblur="flushAutoSaveDish(${d.id})">${esc(d.description || "")}</textarea>
@@ -5745,6 +5758,7 @@ async function saveDishById(dishId) {
   const nameInput = container.querySelector(".dish-name-inp");
   const priceInput = container.querySelector(".price");
   const descInput = container.querySelector(".desc");
+  const piecesInput = container.querySelector(".pieces");
   const availInput = container.querySelector(".avail");
 
   // Sync to other container if present
@@ -5753,6 +5767,7 @@ async function saveDishById(dishId) {
     const n = other.querySelector(".dish-name-inp"); if (n && nameInput) n.value = nameInput.value;
     const p = other.querySelector(".price"); if (p && priceInput) p.value = priceInput.value;
     const d = other.querySelector(".desc"); if (d && descInput) d.value = descInput.value;
+    const pc = other.querySelector(".pieces"); if (pc && piecesInput) pc.value = piecesInput.value;
     const av = other.querySelector(".avail"); if (av && availInput) av.checked = availInput.checked;
     if (other === card && availInput) {
       const lbl = card.querySelector(".switch-label");
@@ -5766,6 +5781,13 @@ async function saveDishById(dishId) {
   const nameVal = (nameInput ? nameInput.value : "").trim();
   if (!nameVal) {
     showError("Menu item name cannot be empty.");
+    setAutoSaveIndicator("error");
+    return;
+  }
+
+  const piecesVal = parseInt(piecesInput ? piecesInput.value : 1, 10);
+  if (isNaN(piecesVal) || piecesVal < 1 || piecesVal > 100) {
+    showError("Pieces per portion must be between 1 and 100.");
     setAutoSaveIndicator("error");
     return;
   }
@@ -5788,6 +5810,7 @@ async function saveDishById(dishId) {
   if (dishObj) {
     dishObj.name = nameVal;
     dishObj.price = parseFloat(priceVal.toFixed(2));
+    dishObj.pieces_per_portion = piecesVal;
     dishObj.description = descInput ? descInput.value : "";
     dishObj.available = availInput ? availInput.checked : true;
   }
@@ -5796,6 +5819,7 @@ async function saveDishById(dishId) {
     id: parseInt(dishId),
     name: nameVal,
     price: parseFloat(priceVal.toFixed(2)),
+    pieces_per_portion: piecesVal,
     description: descInput ? descInput.value : "",
     categories: getDishSelectedCategories(dishId),
     available: availInput ? availInput.checked : true
@@ -5846,6 +5870,14 @@ async function addDish(event) {
     return;
   }
 
+  const piecesVal = parseInt(document.getElementById("newPieces")?.value || "1", 10);
+  if (isNaN(piecesVal) || piecesVal < 1 || piecesVal > 100) {
+    showError("Pieces per portion must be between 1 and 100.");
+    const pi = document.getElementById("newPieces");
+    if (pi) pi.focus();
+    return;
+  }
+
   const btn = document.getElementById("btnAddDishSubmit");
   if (btn) btn.disabled = true;
 
@@ -5853,6 +5885,7 @@ async function addDish(event) {
     const body = {
       name,
       price: priceVal.toFixed(2),
+      pieces_per_portion: piecesVal,
       description: document.getElementById("newDescription").value.trim(),
       categories: newDishSelectedCategories.slice(0, 3),
       available: true
@@ -5879,6 +5912,7 @@ async function addDish(event) {
 
     document.getElementById("newName").value = "";
     document.getElementById("newPrice").value = "5.00";
+    if (document.getElementById("newPieces")) document.getElementById("newPieces").value = "1";
     document.getElementById("newDescription").value = "";
     newDishSelectedCategories = [];
     clearNewDishPhoto();
@@ -5937,17 +5971,27 @@ async function saveMenu() {
       showError("Menu item price can have at most 2 decimal places (e.g. 1.50).");
       return;
     }
+    const piecesEl = r.querySelector(".pieces");
+    const piecesRaw = piecesEl ? piecesEl.value : "1";
+    const pcVal = parseInt(piecesRaw, 10);
+    if (isNaN(pcVal) || pcVal < 1 || pcVal > 100) {
+      showError("Each menu item pieces per portion must be between 1 and 100.");
+      return;
+    }
   }
 
   const dishes = items.map(r => {
     const priceEl = r.querySelector(".price");
     const nameEl = r.querySelector(".dish-name-inp");
+    const piecesEl = r.querySelector(".pieces");
     const id = r.dataset.dishId || (priceEl ? priceEl.dataset.id : 0);
     const pVal = parseFloat(priceEl ? priceEl.value : 0) || 0;
+    const pcVal = parseInt(piecesEl ? piecesEl.value : 1, 10) || 1;
     return {
       id: parseInt(id),
       name: nameEl ? nameEl.value.trim() : undefined,
       price: parseFloat(pVal.toFixed(2)),
+      pieces_per_portion: pcVal,
       description: r.querySelector(".desc") ? r.querySelector(".desc").value : "",
       categories: getDishSelectedCategories(id),
       available: r.querySelector(".avail") ? r.querySelector(".avail").checked : true

@@ -369,13 +369,24 @@ def _clean_description(value) -> str:
     return text
 
 def _clean_pieces(value):
-    return 1
+    if value is None or value == "":
+        return 1
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Pieces per portion must be a whole number")
+    if number < 1 or number > 100:
+        raise HTTPException(status_code=400, detail="Pieces per portion must be from 1 to 100")
+    return number
 
 def _bill_quantity(raw_quantity: float, pieces_per_portion=1):
-    qty = int(round(float(raw_quantity)))
-    if qty < 1:
+    pieces = int(round(float(raw_quantity)))
+    if pieces < 1:
         return 0, None
-    return qty, None
+    group = pieces_per_portion or 0
+    if group <= 1:
+        return pieces, None
+    return math.ceil(pieces / group), pieces
 
 def _dish_json(dish: Dish) -> dict:
     cats = _parse_dish_categories(getattr(dish, "categories", "[]"))
@@ -388,6 +399,7 @@ def _dish_json(dish: Dish) -> dict:
         "available": bool(dish.available),
         "unit": dish.unit or "portion",
         "description": dish.description or "",
+        "pieces_per_portion": getattr(dish, "pieces_per_portion", 1) or 1,
         "categories": cats,
         "image_key": getattr(dish, "image_key", "") or "",
         "image_url": img_url,
@@ -1137,8 +1149,10 @@ def get_public_pricelist(db: Session = Depends(get_db)):
 
     items = []
     for d in dishes:
+        pieces = getattr(d, "pieces_per_portion", 1) or 1
         unit = d.unit or "portion"
         price = round(float(d.price or 0.0), 2)
+        price_per_piece = round(price / pieces, 2) if pieces > 0 else price
         cats = _parse_dish_categories(getattr(d, "categories", "[]"))
         img_url = _dish_image_url(d)
         items.append({
@@ -1147,6 +1161,8 @@ def get_public_pricelist(db: Session = Depends(get_db)):
             "raw_name": d.name,
             "price": price,
             "unit": unit,
+            "pieces_per_portion": pieces,
+            "price_per_piece": price_per_piece,
             "available": bool(d.available),
             "description": d.description or "",
             "categories": cats,
@@ -1758,6 +1774,8 @@ def update_menu(dishes: List[dict], request: Request, db: Session = Depends(get_
                 dish.price = round(p, 2)
             if "description" in d:
                 dish.description = _clean_description(d.get("description"))
+            if "pieces_per_portion" in d:
+                dish.pieces_per_portion = _clean_pieces(d.get("pieces_per_portion"))
             if "categories" in d:
                 cleaned_cats = _clean_categories(d.get("categories"), db=db, auto_create=True)
                 dish.categories = json.dumps(cleaned_cats)
@@ -1804,7 +1822,7 @@ def add_menu_item(payload: dict, request: Request, db: Session = Depends(get_db)
         available=bool(payload.get("available", True)),
         unit=unit,
         description=_clean_description(payload.get("description")),
-        pieces_per_portion=1,
+        pieces_per_portion=_clean_pieces(payload.get("pieces_per_portion")),
         categories=json.dumps(cleaned_cats),
         image_key=image_key,
         sort_order=next_sort,
@@ -1853,15 +1871,17 @@ def export_admin_menu_csv(request: Request, db: Session = Depends(get_db)):
 
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["Name", "Price", "Categories", "Available", "Description", "Photo"])
+    writer.writerow(["Name", "Price", "Categories", "Pieces", "Available", "Description", "Photo"])
     for d in dishes:
         p_val = f"{d.price:.2f}" if d.price is not None else "0.00"
         avail_str = "Yes" if d.available else "No"
+        pieces_val = getattr(d, "pieces_per_portion", 1) or 1
         cats_str = "; ".join(_parse_dish_categories(getattr(d, "categories", "[]")))
         writer.writerow([
             d.name or "",
             p_val,
             cats_str,
+            pieces_val,
             avail_str,
             d.description or "",
             getattr(d, "image_key", "") or "",
@@ -1939,6 +1959,8 @@ async def import_admin_menu_csv(
             col_map["price"] = idx
         elif h in ("categories", "category", "tags", "tag") and "categories" not in col_map:
             col_map["categories"] = idx
+        elif h in ("pieces", "piece", "pieces per portion", "pieces_per_portion", "portion pieces") and "pieces" not in col_map:
+            col_map["pieces"] = idx
         elif h in ("available", "available today", "is available", "active", "status", "enabled") and "available" not in col_map:
             col_map["available"] = idx
         elif h in ("description", "desc") and "description" not in col_map:
@@ -2006,6 +2028,12 @@ async def import_admin_menu_csv(
         if len(desc_raw) > 500:
             desc_raw = desc_raw[:500]
 
+        pieces_raw = get_val("pieces", "1")
+        try:
+            pieces_val = _clean_pieces(pieces_raw)
+        except HTTPException:
+            pieces_val = 1
+
         photo_raw = get_val("photo") or existing_photos.get(name_lower, "")
 
         dish = Dish(
@@ -2015,7 +2043,7 @@ async def import_admin_menu_csv(
             available=avail_val,
             unit="portion",
             description=desc_raw,
-            pieces_per_portion=1,
+            pieces_per_portion=pieces_val,
             categories=json.dumps(cleaned_cats),
             image_key=photo_raw,
         )
@@ -2959,12 +2987,14 @@ def _normalize_order_items(req_items: list, db: Session) -> tuple[list[BillItem]
         unit_price = round(float(dish.price or 0.0), 2)
         sub = round(unit_price * qty, 2)
         total += sub
+        ppp = getattr(dish, "pieces_per_portion", 1) or 1
+        pieces_total = (qty * ppp) if ppp > 1 else None
         bill_items.append(BillItem(
             name=dish.name,
             quantity=qty,
             unit_price=unit_price,
             subtotal=sub,
-            piece_count=None,
+            piece_count=pieces_total,
         ))
 
     if not bill_items:
