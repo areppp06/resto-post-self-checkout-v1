@@ -24,7 +24,7 @@ import httpx
 import razorpay
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 from dotenv import dotenv_values
 
 from .db import ROOT, ENV_DIR, SessionLocal, init_db, Category, Dish, Cashier, AuditLog, SessionBill, CheckoutIntent, ClientCooldown, ScanAttempt, FailedScan, BillRefund, Feedback, AdminUser, AdminSession, next_bill_number
@@ -2071,6 +2071,256 @@ async def import_admin_menu_csv(
         "ok": True,
         "count": len(new_dishes),
         "message": f"Successfully imported and overwrote menu with {len(new_dishes)} items."
+    }
+
+
+def _resolve_sync_url(raw_source: str) -> str:
+    src = str(raw_source or "").strip()
+    if not src:
+        raise HTTPException(status_code=400, detail="Please enter an AFRC domain or API URL (e.g. demo.takcakap.com).")
+    if not re.match(r"^https?://", src, re.IGNORECASE):
+        src = "https://" + src.lstrip("/")
+    parsed = urlparse(src)
+    if parsed.scheme.lower() not in ("http", "https") or not parsed.netloc:
+        raise HTTPException(status_code=400, detail="Invalid domain or URL.")
+    host = (parsed.hostname or "").strip().lower()
+    if not host or host.startswith("169.254.") or host in ("0.0.0.0",):
+        raise HTTPException(status_code=400, detail="Invalid host address.")
+    path = parsed.path or ""
+    if not path or path == "/":
+        src = f"{parsed.scheme}://{parsed.netloc}/api/pricelist"
+    return src
+
+
+def _get_saved_sync_source() -> str:
+    merged = {
+        **_read_env_file_cached(ENV_DIR / ".env"),
+        **_read_env_file_cached(ROOT / ".env"),
+        **_read_env_file_cached(ENV_DIR / "restaurant.env"),
+        **_read_env_file_cached(ROOT / "restaurant.env"),
+    }
+    return str(merged.get("MENU_SYNC_SOURCE") or os.getenv("MENU_SYNC_SOURCE") or "").strip()
+
+
+def _save_sync_source(source: str) -> None:
+    env_path = ENV_DIR / "restaurant.env"
+    env_path.parent.mkdir(parents=True, exist_ok=True)
+    existing_lines = []
+    if env_path.exists():
+        with open(env_path, "r", encoding="utf-8") as f:
+            existing_lines = f.readlines()
+
+    clean_src = str(source or "").strip().replace("\n", "").replace("\r", "")
+    new_lines = []
+    handled = False
+    for line in existing_lines:
+        s_line = line.strip()
+        if s_line and not s_line.startswith("#") and "=" in s_line:
+            k, _ = s_line.split("=", 1)
+            if k.strip() == "MENU_SYNC_SOURCE":
+                new_lines.append(f"MENU_SYNC_SOURCE={clean_src}\n")
+                handled = True
+                continue
+        new_lines.append(line)
+    if not handled:
+        if new_lines and not new_lines[-1].endswith("\n"):
+            new_lines.append("\n")
+        new_lines.append(f"MENU_SYNC_SOURCE={clean_src}\n")
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+    _RL_FILE_CACHE.pop(str(env_path), None)
+
+
+@app.get("/api/admin/menu/sync/config")
+def get_menu_sync_config(request: Request, db: Session = Depends(get_db)):
+    require_admin_api(request, db)
+    return {"last_source": _get_saved_sync_source()}
+
+
+@app.post("/api/admin/menu/sync")
+async def sync_menu_from_afrc(payload: dict, request: Request, db: Session = Depends(get_db)):
+    current_admin = require_admin_api(request, db)
+    raw_source = str((payload or {}).get("source") or "").strip()
+    target_url = _resolve_sync_url(raw_source)
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            resp = await client.get(target_url, headers={"Accept": "application/json"})
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Could not connect to '{target_url}': {str(exc)[:140]}")
+
+    if resp.status_code < 200 or resp.status_code >= 300:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Remote server returned HTTP {resp.status_code} from {target_url}",
+        )
+
+    try:
+        data = resp.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Remote URL did not return valid JSON.")
+
+    if isinstance(data, dict) and isinstance(data.get("items"), list):
+        remote_items = data["items"]
+        remote_categories = data.get("categories") if isinstance(data.get("categories"), list) else []
+    elif isinstance(data, list):
+        remote_items = data
+        remote_categories = []
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Remote JSON does not match AFRC /api/pricelist or /api/menu format.",
+        )
+
+    if not remote_items:
+        raise HTTPException(status_code=400, detail="Remote menu returned 0 items. Sync aborted to avoid clearing your menu.")
+
+    # 1. Sync / create categories from remote_categories (preserving icons)
+    existing_cats = db.query(Category).order_by(Category.sort_order.asc(), Category.id.asc()).all()
+    cat_by_lower = {c.name.casefold(): c for c in existing_cats}
+    max_cat_sort = max((c.sort_order or 0 for c in existing_cats), default=-1)
+    categories_created = 0
+
+    for rc in remote_categories:
+        if not isinstance(rc, dict):
+            continue
+        c_name = str(rc.get("name") or "").strip()
+        if not c_name or c_name.casefold() in cat_by_lower:
+            continue
+        max_cat_sort += 1
+        c_icon = str(rc.get("icon") or "").strip() or _guess_category_icon(c_name)
+        new_cat = Category(name=c_name, icon=c_icon, sort_order=max_cat_sort)
+        db.add(new_cat)
+        db.flush()
+        cat_by_lower[c_name.casefold()] = new_cat
+        categories_created += 1
+
+    # Snapshot existing dishes so we preserve uploaded photos & IDs on matching items
+    existing_dishes = db.query(Dish).all()
+    existing_by_lower = {}
+    for ed in existing_dishes:
+        if ed.name:
+            existing_by_lower[ed.name.strip().casefold()] = ed
+
+    cats_count_before = db.query(Category).count()
+
+    kept_ids = set()
+    added_count = 0
+    updated_count = 0
+    seen_names = set()
+
+    for idx, item in enumerate(remote_items, start=1):
+        if not isinstance(item, dict):
+            continue
+        # Customer Alias if set, otherwise AI Name (in /api/pricelist, 'name' is already alias || raw_name)
+        target_name = str(item.get("display_name") or item.get("name") or item.get("raw_name") or "").strip()
+        raw_name = str(item.get("raw_name") or "").strip()
+        if not target_name:
+            continue
+
+        name_lower = target_name.casefold()
+        if name_lower in seen_names:
+            continue
+        seen_names.add(name_lower)
+
+        try:
+            price_val = round(float(item.get("price") or 0.0), 2)
+        except (TypeError, ValueError):
+            price_val = 0.0
+        if price_val < 0.10:
+            price_val = 0.10
+        elif price_val > 10000:
+            price_val = 10000.0
+
+        try:
+            pieces_val = _clean_pieces(item.get("pieces_per_portion"))
+        except HTTPException:
+            pieces_val = 1
+
+        avail_val = bool(item.get("available", True))
+        desc_val = str(item.get("description") or "").strip()[:500]
+        cleaned_cats = _clean_categories(item.get("categories") or [], db=db, auto_create=True)
+        unit_val = str(item.get("unit") or "portion").strip() or "portion"
+
+        matched = existing_by_lower.get(name_lower)
+        if not matched and raw_name:
+            cand = existing_by_lower.get(raw_name.casefold())
+            if cand and cand.id not in kept_ids:
+                matched = cand
+
+        if matched and matched.id not in kept_ids:
+            matched.name = target_name
+            matched.price = price_val
+            matched.pieces_per_portion = pieces_val
+            matched.available = avail_val
+            matched.unit = unit_val
+            matched.description = desc_val
+            matched.categories = json.dumps(cleaned_cats)
+            matched.sort_order = idx
+            kept_ids.add(matched.id)
+            updated_count += 1
+        else:
+            new_dish = Dish(
+                name=target_name,
+                alias="",
+                price=price_val,
+                available=avail_val,
+                unit=unit_val,
+                description=desc_val,
+                pieces_per_portion=pieces_val,
+                categories=json.dumps(cleaned_cats),
+                image_key="",
+                sort_order=idx,
+            )
+            db.add(new_dish)
+            db.flush()
+            kept_ids.add(new_dish.id)
+            added_count += 1
+
+    if not kept_ids:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="No valid dishes found in remote menu.")
+
+    # Full Mirror: remove local dishes not present in remote menu
+    removed_count = 0
+    for ed in existing_dishes:
+        if ed.id not in kept_ids:
+            db.delete(ed)
+            removed_count += 1
+
+    cats_count_after = db.query(Category).count()
+    total_cats_created = categories_created + max(0, cats_count_after - cats_count_before)
+
+    db.add(AuditLog(
+        cashier_id=current_admin.id,
+        admin_username=current_admin.username,
+        action="MENU_SYNC",
+        details=(
+            f"Admin '{current_admin.username}' synced menu from {target_url}: "
+            f"{added_count} added, {updated_count} updated, {removed_count} removed, "
+            f"{total_cats_created} categories created"
+        ),
+    ))
+    db.commit()
+
+    try:
+        _save_sync_source(raw_source)
+    except Exception:
+        pass
+
+    return {
+        "ok": True,
+        "source_url": target_url,
+        "added": added_count,
+        "updated": updated_count,
+        "removed": removed_count,
+        "categories_created": total_cats_created,
+        "total": len(kept_ids),
+        "message": (
+            f"Synced {len(kept_ids)} item(s) from {target_url} "
+            f"({added_count} added, {updated_count} updated, {removed_count} removed, "
+            f"{total_cats_created} new categories)."
+        ),
     }
 
 @app.get("/api/client-state")

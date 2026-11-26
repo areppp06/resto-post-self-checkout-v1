@@ -2640,6 +2640,12 @@
             </span>
           </div>
           <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <button type="button" class="btn btn-outline" onclick="openMenuSyncModal()" id="btnOpenMenuSync" title="Sync menu, categories, prices, pieces, and availability from AFRC" style="border-color:#ff5e36; color:#ff5e36; background:#fff7ed;">
+              <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+              <span>Sync from AFRC</span>
+            </button>
             <button type="button" class="btn btn-outline" onclick="exportMenuCsv()" id="btnExportMenuCsv" title="Export current menu as a CSV spreadsheet">
               <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -3189,6 +3195,40 @@
     <div class="cat-picker-foot">
       <button type="button" class="btn cat-picker-done-btn" onclick="closeDishCategoryPicker()">Done</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="menuSyncModal" onclick="if(event.target===this) closeMenuSyncModal()">
+  <div class="refund-modal-card" style="max-width: 480px;" role="dialog" aria-modal="true" aria-labelledby="menuSyncModalTitle">
+    <div class="refund-modal-head">
+      <div class="refund-modal-title" id="menuSyncModalTitle">
+        <span>Sync Menu from AFRC</span>
+      </div>
+      <button type="button" class="refund-modal-close" onclick="closeMenuSyncModal()" aria-label="Close">&times;</button>
+    </div>
+    <form id="menuSyncForm" onsubmit="submitMenuSync(event)">
+      <div class="refund-modal-body" style="padding: 1.25rem;">
+        <div style="margin-bottom: 1rem;">
+          <label class="field-label" style="display:block; margin-bottom:0.4rem;">AFRC Domain or API URL</label>
+          <input type="text" id="menuSyncSourceInput" class="input-box" style="width:100%;" placeholder="e.g. demo.takcakap.com or https://demo.takcakap.com/api/pricelist" required autocomplete="off">
+          <p style="font-size:0.75rem; color:#64748b; margin-top:0.35rem;">Enter just a domain (auto-resolves to <code>https://&lt;domain&gt;/api/pricelist</code>) or a full API URL.</p>
+        </div>
+        <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:0.85rem 1rem; font-size:0.78rem; color:#9a3412; line-height:1.5;">
+          <div style="font-weight:700; margin-bottom:0.25rem; color:#c2410c;">Full Mirror Sync Behavior:</div>
+          <ul style="padding-left:1.1rem; margin:0;">
+            <li><strong>Name:</strong> Uses AFRC Customer Alias (or AI Name if blank).</li>
+            <li><strong>Categories:</strong> Creates missing categories automatically &amp; syncs tags.</li>
+            <li><strong>Pricing &amp; Portions:</strong> Updates price, pieces/portion, and availability.</li>
+            <li><strong>Photos &amp; Cleanup:</strong> Preserves uploaded photos for matching items; removes items not in AFRC.</li>
+          </ul>
+        </div>
+        <div id="menuSyncError" style="color:#dc2626; font-size:0.8rem; margin-top:0.75rem; display:none; font-weight:600;"></div>
+      </div>
+      <div class="refund-modal-foot">
+        <button type="button" class="btn btn-outline" onclick="closeMenuSyncModal()">Cancel</button>
+        <button type="submit" class="btn" id="btnSubmitMenuSync">Sync Now</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -6073,6 +6113,83 @@ async function handleMenuCsvFileSelected(event) {
       btnImport.innerHTML = origHtml;
     }
     event.target.value = "";
+  }
+}
+
+async function openMenuSyncModal() {
+  const modal = document.getElementById("menuSyncModal");
+  const inp = document.getElementById("menuSyncSourceInput");
+  const errEl = document.getElementById("menuSyncError");
+  if (errEl) {
+    errEl.style.display = "none";
+    errEl.textContent = "";
+  }
+  if (inp) {
+    let saved = "";
+    try { saved = localStorage.getItem("kiosk_menu_sync_source") || ""; } catch (e) {}
+    if (!saved) {
+      try {
+        const res = await fetch("/api/admin/menu/sync/config", { cache: "no-store" });
+        if (res.ok) {
+          const cfg = await res.json();
+          if (cfg && cfg.last_source) saved = cfg.last_source;
+        }
+      } catch (e) {}
+    }
+    inp.value = saved;
+  }
+  if (modal) modal.classList.add("open");
+  if (inp) setTimeout(() => inp.focus(), 60);
+}
+
+function closeMenuSyncModal() {
+  const modal = document.getElementById("menuSyncModal");
+  if (modal) modal.classList.remove("open");
+}
+
+async function submitMenuSync(event) {
+  event.preventDefault();
+  const inp = document.getElementById("menuSyncSourceInput");
+  const errEl = document.getElementById("menuSyncError");
+  const btn = document.getElementById("btnSubmitMenuSync");
+  const source = (inp ? inp.value : "").trim();
+  if (!source) return;
+
+  if (errEl) {
+    errEl.style.display = "none";
+    errEl.textContent = "";
+  }
+  const origText = btn ? btn.textContent : "Sync Now";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Syncing...";
+  }
+
+  try {
+    const res = await fetch("/api/admin/menu/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.detail || "Failed to sync menu from AFRC.");
+    }
+    try { localStorage.setItem("kiosk_menu_sync_source", source); } catch (e) {}
+    closeMenuSyncModal();
+    showToast(data.message || "Menu synced successfully!");
+    await loadCategories();
+    await loadMenu();
+  } catch (err) {
+    if (errEl) {
+      errEl.textContent = err.message || "Sync failed.";
+      errEl.style.display = "block";
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
   }
 }
 
